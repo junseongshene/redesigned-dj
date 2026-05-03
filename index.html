@@ -3,16 +3,318 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>프로토타입</title>
+    <title>Redesigned DJ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/styles.css" />
   </head>
-  <body>
-    <header class="site-header">
-      <h1 class="site-title">시작 페이지</h1>
-    </header>
-    <main class="site-main">
-      <p class="lead">웹 프로젝트 기본 구조가 준비되었습니다.</p>
-    </main>
-    <script src="js/main.js" type="module"></script>
+  <body class="exhibition-body">
+    <div class="page-shell">
+      <div class="browser-stage" aria-label="전시용 크롬 창 무대">
+        <!-- 1: 좌상 — 포커스(선택) 창 -->
+        <div class="chrome-window chrome-window--selected" role="img" aria-label="크롬 브라우저 창 1">
+          <div class="chrome-frame">
+            <div class="chrome-tabstrip chrome-tabstrip--drag-handle">
+              <div class="chrome-tabstrip__head">
+                <div class="chrome-tabstrip__traffic" aria-hidden="true">
+                  <span class="chrome-traffic__dot chrome-traffic__dot--close"></span>
+                  <span class="chrome-traffic__dot chrome-traffic__dot--min"></span>
+                  <span class="chrome-traffic__dot chrome-traffic__dot--zoom"></span>
+                </div>
+                <div class="chrome-tabstrip__tabs-surface">
+                  <div class="chrome-tabstrip__tabs">
+                    <div class="chrome-tab chrome-tab--active">
+                      <span class="chrome-tab__favicon chrome-tab__favicon--chrome" aria-hidden="true"></span>
+                      <span class="chrome-tab__title">Volume</span>
+                      <button type="button" class="chrome-tab__close" tabindex="-1" aria-hidden="true">
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                          <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                        </svg>
+                      </button>
+                    </div>
+                    <button type="button" class="chrome-newtab" tabindex="-1" aria-label="새 탭" title="새 탭">
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M6 2.5V9.5M2.5 6H9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="chrome-toolbar">
+              <div class="chrome-toolbar__row">
+                <div class="chrome-toolbar__nav">
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="뒤로">
+                    <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path fill="#5F6368" d="M12.5 15.833 6.667 10 12.5 4.167 11.25 2.917 4.167 10l7.083 7.083 1.25-1.25Z" /></svg>
+                  </button>
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="앞으로">
+                    <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path fill="#BABCBE" d="M7.5 4.167 13.333 10 7.5 15.833 8.75 17.083 15.833 10 8.75 2.917 7.5 4.167Z" /></svg>
+                  </button>
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="새로고침">
+                    <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path fill="#5F6368" d="M10 3.333a6.667 6.667 0 1 1-6.55 5.417h1.717a4.95 4.95 0 1 0 .05-1.25H3.333V10A8.333 8.333 0 1 1 10 1.667V3.333Z" /></svg>
+                  </button>
+                </div>
+                <div class="chrome-omnibox">
+                  <span class="chrome-omnibox__icon" aria-hidden="true">
+                    <svg class="chrome-omnibox__google-g" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                  </span>
+                  <span class="chrome-omnibox__url"></span>
+                </div>
+                <div class="chrome-toolbar__tail">
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="공유" title="공유">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path stroke="#5F6368" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" d="M12 4v10m-4-6 4-4 4 4" />
+                      <rect x="5" y="14" width="14" height="7" rx="1.5" stroke="#5F6368" stroke-width="1.65" fill="none" />
+                    </svg>
+                  </button>
+                  <div class="chrome-profile" aria-hidden="true"></div>
+                  <button type="button" class="chrome-iconbtn chrome-iconbtn--menu" tabindex="-1" aria-label="Chrome 맞춤설정 및 제어">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                      <circle cx="10" cy="4.5" r="1.5" fill="#5F6368" />
+                      <circle cx="10" cy="10" r="1.5" fill="#5F6368" />
+                      <circle cx="10" cy="15.5" r="1.5" fill="#5F6368" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="chrome-page chrome-page--blank"></div>
+          </div>
+        </div>
+
+        <!-- 2–4: 동일 마크업, 비포커스(선택 없음) — 아래 두 창은 selected 클래스만 생략 -->
+        <div class="chrome-window" role="img" aria-label="크롬 브라우저 창 2">
+          <div class="chrome-frame">
+            <div class="chrome-tabstrip chrome-tabstrip--drag-handle">
+              <div class="chrome-tabstrip__head">
+                <div class="chrome-tabstrip__traffic" aria-hidden="true">
+                  <span class="chrome-traffic__dot chrome-traffic__dot--close"></span>
+                  <span class="chrome-traffic__dot chrome-traffic__dot--min"></span>
+                  <span class="chrome-traffic__dot chrome-traffic__dot--zoom"></span>
+                </div>
+                <div class="chrome-tabstrip__tabs-surface">
+                  <div class="chrome-tabstrip__tabs">
+                    <div class="chrome-tab chrome-tab--active">
+                      <span class="chrome-tab__favicon chrome-tab__favicon--chrome" aria-hidden="true"></span>
+                      <span class="chrome-tab__title">Pitch</span>
+                      <button type="button" class="chrome-tab__close" tabindex="-1" aria-hidden="true">
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                          <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                        </svg>
+                      </button>
+                    </div>
+                    <button type="button" class="chrome-newtab" tabindex="-1" aria-label="새 탭" title="새 탭">
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M6 2.5V9.5M2.5 6H9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="chrome-toolbar">
+              <div class="chrome-toolbar__row">
+                <div class="chrome-toolbar__nav">
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="뒤로">
+                    <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path fill="#5F6368" d="M12.5 15.833 6.667 10 12.5 4.167 11.25 2.917 4.167 10l7.083 7.083 1.25-1.25Z" /></svg>
+                  </button>
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="앞으로">
+                    <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path fill="#BABCBE" d="M7.5 4.167 13.333 10 7.5 15.833 8.75 17.083 15.833 10 8.75 2.917 7.5 4.167Z" /></svg>
+                  </button>
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="새로고침">
+                    <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path fill="#5F6368" d="M10 3.333a6.667 6.667 0 1 1-6.55 5.417h1.717a4.95 4.95 0 1 0 .05-1.25H3.333V10A8.333 8.333 0 1 1 10 1.667V3.333Z" /></svg>
+                  </button>
+                </div>
+                <div class="chrome-omnibox">
+                  <span class="chrome-omnibox__icon" aria-hidden="true">
+                    <svg class="chrome-omnibox__google-g" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                  </span>
+                  <span class="chrome-omnibox__url"></span>
+                </div>
+                <div class="chrome-toolbar__tail">
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="공유" title="공유">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path stroke="#5F6368" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" d="M12 4v10m-4-6 4-4 4 4" />
+                      <rect x="5" y="14" width="14" height="7" rx="1.5" stroke="#5F6368" stroke-width="1.65" fill="none" />
+                    </svg>
+                  </button>
+                  <div class="chrome-profile" aria-hidden="true"></div>
+                  <button type="button" class="chrome-iconbtn chrome-iconbtn--menu" tabindex="-1" aria-label="Chrome 맞춤설정 및 제어">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                      <circle cx="10" cy="4.5" r="1.5" fill="#5F6368" />
+                      <circle cx="10" cy="10" r="1.5" fill="#5F6368" />
+                      <circle cx="10" cy="15.5" r="1.5" fill="#5F6368" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="chrome-page chrome-page--blank"></div>
+          </div>
+        </div>
+
+        <div class="chrome-window" role="img" aria-label="크롬 브라우저 창 3">
+          <div class="chrome-frame">
+            <div class="chrome-tabstrip chrome-tabstrip--drag-handle">
+              <div class="chrome-tabstrip__head">
+                <div class="chrome-tabstrip__traffic" aria-hidden="true">
+                  <span class="chrome-traffic__dot chrome-traffic__dot--close"></span>
+                  <span class="chrome-traffic__dot chrome-traffic__dot--min"></span>
+                  <span class="chrome-traffic__dot chrome-traffic__dot--zoom"></span>
+                </div>
+                <div class="chrome-tabstrip__tabs-surface">
+                  <div class="chrome-tabstrip__tabs">
+                    <div class="chrome-tab chrome-tab--active">
+                      <span class="chrome-tab__favicon chrome-tab__favicon--chrome" aria-hidden="true"></span>
+                      <span class="chrome-tab__title">Tempo</span>
+                      <button type="button" class="chrome-tab__close" tabindex="-1" aria-hidden="true">
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                          <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                        </svg>
+                      </button>
+                    </div>
+                    <button type="button" class="chrome-newtab" tabindex="-1" aria-label="새 탭" title="새 탭">
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M6 2.5V9.5M2.5 6H9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="chrome-toolbar">
+              <div class="chrome-toolbar__row">
+                <div class="chrome-toolbar__nav">
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="뒤로">
+                    <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path fill="#5F6368" d="M12.5 15.833 6.667 10 12.5 4.167 11.25 2.917 4.167 10l7.083 7.083 1.25-1.25Z" /></svg>
+                  </button>
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="앞으로">
+                    <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path fill="#BABCBE" d="M7.5 4.167 13.333 10 7.5 15.833 8.75 17.083 15.833 10 8.75 2.917 7.5 4.167Z" /></svg>
+                  </button>
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="새로고침">
+                    <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path fill="#5F6368" d="M10 3.333a6.667 6.667 0 1 1-6.55 5.417h1.717a4.95 4.95 0 1 0 .05-1.25H3.333V10A8.333 8.333 0 1 1 10 1.667V3.333Z" /></svg>
+                  </button>
+                </div>
+                <div class="chrome-omnibox">
+                  <span class="chrome-omnibox__icon" aria-hidden="true">
+                    <svg class="chrome-omnibox__google-g" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                  </span>
+                  <span class="chrome-omnibox__url"></span>
+                </div>
+                <div class="chrome-toolbar__tail">
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="공유" title="공유">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path stroke="#5F6368" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" d="M12 4v10m-4-6 4-4 4 4" />
+                      <rect x="5" y="14" width="14" height="7" rx="1.5" stroke="#5F6368" stroke-width="1.65" fill="none" />
+                    </svg>
+                  </button>
+                  <div class="chrome-profile" aria-hidden="true"></div>
+                  <button type="button" class="chrome-iconbtn chrome-iconbtn--menu" tabindex="-1" aria-label="Chrome 맞춤설정 및 제어">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                      <circle cx="10" cy="4.5" r="1.5" fill="#5F6368" />
+                      <circle cx="10" cy="10" r="1.5" fill="#5F6368" />
+                      <circle cx="10" cy="15.5" r="1.5" fill="#5F6368" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="chrome-page chrome-page--blank"></div>
+          </div>
+        </div>
+
+        <div class="chrome-window" role="img" aria-label="크롬 브라우저 창 4">
+          <div class="chrome-frame">
+            <div class="chrome-tabstrip chrome-tabstrip--drag-handle">
+              <div class="chrome-tabstrip__head">
+                <div class="chrome-tabstrip__traffic" aria-hidden="true">
+                  <span class="chrome-traffic__dot chrome-traffic__dot--close"></span>
+                  <span class="chrome-traffic__dot chrome-traffic__dot--min"></span>
+                  <span class="chrome-traffic__dot chrome-traffic__dot--zoom"></span>
+                </div>
+                <div class="chrome-tabstrip__tabs-surface">
+                  <div class="chrome-tabstrip__tabs">
+                    <div class="chrome-tab chrome-tab--active">
+                      <span class="chrome-tab__favicon chrome-tab__favicon--chrome" aria-hidden="true"></span>
+                      <span class="chrome-tab__title">Bass</span>
+                      <button type="button" class="chrome-tab__close" tabindex="-1" aria-hidden="true">
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                          <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                        </svg>
+                      </button>
+                    </div>
+                    <button type="button" class="chrome-newtab" tabindex="-1" aria-label="새 탭" title="새 탭">
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M6 2.5V9.5M2.5 6H9.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="chrome-toolbar">
+              <div class="chrome-toolbar__row">
+                <div class="chrome-toolbar__nav">
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="뒤로">
+                    <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path fill="#5F6368" d="M12.5 15.833 6.667 10 12.5 4.167 11.25 2.917 4.167 10l7.083 7.083 1.25-1.25Z" /></svg>
+                  </button>
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="앞으로">
+                    <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path fill="#BABCBE" d="M7.5 4.167 13.333 10 7.5 15.833 8.75 17.083 15.833 10 8.75 2.917 7.5 4.167Z" /></svg>
+                  </button>
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="새로고침">
+                    <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path fill="#5F6368" d="M10 3.333a6.667 6.667 0 1 1-6.55 5.417h1.717a4.95 4.95 0 1 0 .05-1.25H3.333V10A8.333 8.333 0 1 1 10 1.667V3.333Z" /></svg>
+                  </button>
+                </div>
+                <div class="chrome-omnibox">
+                  <span class="chrome-omnibox__icon" aria-hidden="true">
+                    <svg class="chrome-omnibox__google-g" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                  </span>
+                  <span class="chrome-omnibox__url"></span>
+                </div>
+                <div class="chrome-toolbar__tail">
+                  <button type="button" class="chrome-iconbtn" tabindex="-1" aria-label="공유" title="공유">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path stroke="#5F6368" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" d="M12 4v10m-4-6 4-4 4 4" />
+                      <rect x="5" y="14" width="14" height="7" rx="1.5" stroke="#5F6368" stroke-width="1.65" fill="none" />
+                    </svg>
+                  </button>
+                  <div class="chrome-profile" aria-hidden="true"></div>
+                  <button type="button" class="chrome-iconbtn chrome-iconbtn--menu" tabindex="-1" aria-label="Chrome 맞춤설정 및 제어">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                      <circle cx="10" cy="4.5" r="1.5" fill="#5F6368" />
+                      <circle cx="10" cy="10" r="1.5" fill="#5F6368" />
+                      <circle cx="10" cy="15.5" r="1.5" fill="#5F6368" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="chrome-page chrome-page--blank"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="js/main.js" defer></script>
   </body>
 </html>
