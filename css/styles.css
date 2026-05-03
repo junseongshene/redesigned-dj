@@ -1,0 +1,46 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --color-bg: #f6f6f4;
+  --color-text: #1a1a1a;
+  --color-accent: #2563eb;
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --space: 1rem;
+  --max-width: 42rem;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+}
+
+.site-header {
+  padding: calc(var(--space) * 2) var(--space);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+.site-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.site-main {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: calc(var(--space) * 2) var(--space);
+}
+
+.lead {
+  margin: 0;
+  font-size: 1.125rem;
+}
