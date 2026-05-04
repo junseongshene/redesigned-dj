@@ -110,10 +110,12 @@ function findInsertBefore(strip, clientX) {
 }
 
 function clearDropMarkers() {
-  document.querySelectorAll(".chrome-tabstrip__tabs--drop-target").forEach((el) => {
-    el.classList.remove("chrome-tabstrip__tabs--drop-target");
-    el.style.removeProperty("--drop-marker-x");
-  });
+  document
+    .querySelectorAll(".chrome-tabstrip__tabs--drop-target")
+    .forEach((el) => {
+      el.classList.remove("chrome-tabstrip__tabs--drop-target");
+      el.style.removeProperty("--drop-marker-x");
+    });
 }
 
 function updateDropIndicator(strip, clientX) {
@@ -194,7 +196,8 @@ function mergeAllTabs(sourceStrip, targetStrip, clientX, clientY) {
   }
   targetStrip.insertBefore(frag, insertBefore);
   const mergedTabs = getTabs(targetStrip);
-  const active = pickTabNearestX(targetStrip, x) || mergedTabs[mergedTabs.length - 1];
+  const active =
+    pickTabNearestX(targetStrip, x) || mergedTabs[mergedTabs.length - 1];
   if (active) setOnlyActiveTab(targetStrip, active);
   clearDropMarkers();
 }
@@ -328,7 +331,11 @@ function beginTabTear(e, win, tab, stage) {
     const mx = ev.clientX - startX;
     const my = ev.clientY - startY;
 
-    if (!tearing && !scrubbing && (Math.abs(mx) > DRAG_THRESHOLD_PX || Math.abs(my) > DRAG_THRESHOLD_PX)) {
+    if (
+      !tearing &&
+      !scrubbing &&
+      (Math.abs(mx) > DRAG_THRESHOLD_PX || Math.abs(my) > DRAG_THRESHOLD_PX)
+    ) {
       const horizontalLead = Math.abs(mx) - Math.abs(my);
       if (channelKeyTab && horizontalLead >= TAB_SCRUB_HORIZONTAL_LEAD_PX) {
         scrubbing = true;
@@ -345,7 +352,7 @@ function beginTabTear(e, win, tab, stage) {
       djState[channelKeyTab] = clamp(
         djState[channelKeyTab] + Math.abs(dx) / DJ_WIN_PX_PER_PERCENT,
         0,
-        100
+        100,
       );
       syncExhibitionAudioFromDjState({ deferToFrame: true });
       scheduleDjHudDom();
@@ -472,7 +479,10 @@ function beginWindowDrag(e, win, handle, stage, tune) {
     if (ev.pointerId !== pointerId) return;
     const mx = ev.clientX - startX;
     const my = ev.clientY - startY;
-    if (!dragging && (Math.abs(mx) > DRAG_THRESHOLD_PX || Math.abs(my) > DRAG_THRESHOLD_PX)) {
+    if (
+      !dragging &&
+      (Math.abs(mx) > DRAG_THRESHOLD_PX || Math.abs(my) > DRAG_THRESHOLD_PX)
+    ) {
       dragging = true;
       win.classList.add("chrome-window--dragging");
       document.body.classList.add("chrome-ui--window-dragging");
@@ -499,7 +509,8 @@ function beginWindowDrag(e, win, handle, stage, tune) {
       if (prevCx !== null && prevCy !== null) {
         const segment = Math.hypot(cx - prevCx, cy - prevCy);
         if (segment > 0) {
-          const deltaPct = (tune.mode === "up" ? 1 : -1) * (segment / DJ_WIN_PX_PER_PERCENT);
+          const deltaPct =
+            (tune.mode === "up" ? 1 : -1) * (segment / DJ_WIN_PX_PER_PERCENT);
           djState[channelKey] = clamp(djState[channelKey] + deltaPct, 0, 100);
           syncExhibitionAudioFromDjState();
           scheduleDjHudDom();
@@ -557,8 +568,8 @@ function updateDjHudDom() {
   el.innerHTML = DJ_CHANNELS.map(
     (name) =>
       `<div class="dj-param-hud__row"><span class="dj-param-hud__name">${name}</span><span class="dj-param-hud__val">${Math.round(
-        djState[name]
-      )}%</span></div>`
+        djState[name],
+      )}%</span></div>`,
   ).join("");
 }
 
@@ -666,7 +677,8 @@ function pitchServoTick() {
     return;
   }
 
-  const step = Math.sign(dist) * Math.min(Math.abs(dist), RB_PITCH_MAX_STEP_RATIO);
+  const step =
+    Math.sign(dist) * Math.min(Math.abs(dist), RB_PITCH_MAX_STEP_RATIO);
   const next = clampSafeRatio(cur + step);
 
   try {
@@ -722,7 +734,13 @@ function scheduleDeferredExhibitionAudioSync() {
 
 /** 게인·베이스·템포·피치를 한 번에 적용(드래그용 rAF 콜백·즉시 갱신 공통) */
 function runExhibitionAudioGraphSync(options = {}) {
-  if (!exhibitionGraphReady || !exhibitionCtx || !exhibitionMaster || !exhibitionBass) return;
+  if (
+    !exhibitionGraphReady ||
+    !exhibitionCtx ||
+    !exhibitionMaster ||
+    !exhibitionBass
+  )
+    return;
 
   ensureExhibitionMediaPlaying();
 
@@ -731,14 +749,20 @@ function runExhibitionAudioGraphSync(options = {}) {
   }
 
   const v = djState.Volume;
-  if (!Number.isFinite(lastAppliedVolPct) || Math.abs(v - lastAppliedVolPct) > 0.02) {
+  if (
+    !Number.isFinite(lastAppliedVolPct) ||
+    Math.abs(v - lastAppliedVolPct) > 0.02
+  ) {
     const volDb = pctToDbFromCenter(v, 14);
     exhibitionMaster.gain.value = Math.pow(10, volDb / 20);
     lastAppliedVolPct = v;
   }
 
   const b = djState.Bass;
-  if (!Number.isFinite(lastAppliedBassPct) || Math.abs(b - lastAppliedBassPct) > 0.02) {
+  if (
+    !Number.isFinite(lastAppliedBassPct) ||
+    Math.abs(b - lastAppliedBassPct) > 0.02
+  ) {
     const bassDb = pctToDbFromCenter(b, 12);
     exhibitionBass.gain.value = bassDb;
     lastAppliedBassPct = b;
@@ -794,7 +818,10 @@ async function initExhibitionWebAudioGraph(el) {
   exhibitionMaster = exhibitionCtx.createGain();
   exhibitionMaster.gain.value = 1;
 
-  const workletUrl = new URL("rubberband/rubberband-processor.js", window.location.href).href;
+  const workletUrl = new URL(
+    "rubberband/rubberband-processor.js",
+    window.location.href,
+  ).href;
 
   try {
     exhibitionRb = await createRubberBandNode(exhibitionCtx, workletUrl, {});
@@ -806,7 +833,10 @@ async function initExhibitionWebAudioGraph(el) {
     src.connect(exhibitionRb);
     exhibitionRb.connect(exhibitionBass);
   } catch (err) {
-    console.warn("[exhibition-audio] Rubber Band 실패 — 피치 없음, 템포만 playbackRate:", err);
+    console.warn(
+      "[exhibition-audio] Rubber Band 실패 — 피치 없음, 템포만 playbackRate:",
+      err,
+    );
     exhibitionRb = null;
     src.connect(exhibitionBass);
   }
@@ -943,7 +973,7 @@ if (document.readyState === "loading") {
     () => {
       void boot();
     },
-    { once: true }
+    { once: true },
   );
 } else {
   void boot();
