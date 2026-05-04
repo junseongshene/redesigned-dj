@@ -14,7 +14,7 @@ const POINTER_WIN_OPTS = { capture: true };
 const DJ_CHANNELS = ["Volume", "Pitch", "Tempo", "Bass"];
 
 /** 창 중심이 이 픽셀만큼 움직일 때 약 1% 변화 (클수록 둔감). 예전 대비 약 3배 둔하게. */
-const DJ_WIN_PX_PER_PERCENT = 12;
+const DJ_WIN_PX_PER_PERCENT = 20;
 
 const djState = Object.fromEntries(DJ_CHANNELS.map((name) => [name, 50]));
 
@@ -40,6 +40,14 @@ let exhibitionPitchServoRaf = 0;
 /** 한 번에 바꿀 수 있는 피치 비율 상한(워클릿 안정성) */
 const RB_PITCH_MAX_STEP_RATIO = 0.0024;
 
+/** Pitch 드래그 중 setPitch 최소 간격. 너무 낮으면 끊김 */
+const RB_PITCH_LIVE_INTERVAL_MS = 180;
+
+/** Pitch 값이 이 정도 이상 바뀌었을 때만 setPitch */
+const RB_PITCH_LIVE_MIN_DIFF = 0.004;
+
+let exhibitionRbLastLivePitchAt = 0;
+
 /** 템포는 playbackRate로만 — 드래그 중 급변 완화용 스무딩(손 떼면 스냅) */
 let exhibitionTempoPlaybackSmoothed = 1;
 const DJ_TEMPO_PLAYBACK_SMOOTH = 0.68;
@@ -52,8 +60,8 @@ const DJ_PITCH_OCT_RANGE = 0.18;
 /** 템포: HUD % 증가 = 체감 빨라짐(라이브러리 부호에 맞춤 반전 적용) */
 const DJ_TEMPO_OCT_RANGE = 0.16;
 /** Rubber Band에 넣을 배속/피치 비율 하한·상한(너무 극단이면 무음·깨짐) */
-const DJ_RB_RATIO_MIN = 0.88;
-const DJ_RB_RATIO_MAX = 1.14;
+const DJ_RB_RATIO_MIN = 0.5;
+const DJ_RB_RATIO_MAX = 1.5;
 
 const OMNIBOX_GOOGLE_G = `<svg class="chrome-omnibox__google-g" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>`;
 
@@ -509,10 +517,14 @@ function beginWindowDrag(e, win, handle, stage, tune) {
       if (prevCx !== null && prevCy !== null) {
         const segment = Math.hypot(cx - prevCx, cy - prevCy);
         if (segment > 0) {
+          const pxPerPercent =
+            channelKey === "Pitch" ? 40 : DJ_WIN_PX_PER_PERCENT;
+
           const deltaPct =
-            (tune.mode === "up" ? 1 : -1) * (segment / DJ_WIN_PX_PER_PERCENT);
+            (tune.mode === "up" ? 1 : -1) * (segment / pxPerPercent);
           djState[channelKey] = clamp(djState[channelKey] + deltaPct, 0, 100);
-          syncExhibitionAudioFromDjState();
+
+          syncExhibitionAudioFromDjState({ deferToFrame: true });
           scheduleDjHudDom();
         }
       }
@@ -523,7 +535,22 @@ function beginWindowDrag(e, win, handle, stage, tune) {
 
   const onUp = (ev) => {
     if (ev.pointerId !== pointerId) return;
-    flushDjHudDom();
+    if (channelKey === "Pitch") {
+      if (djHudDomRaf) {
+        cancelAnimationFrame(djHudDomRaf);
+        djHudDomRaf = 0;
+      }
+      updateDjHudDom();
+
+      // 손 뗄 때도 directPitch로 확 점프시키지 않음
+      syncExhibitionAudioFromDjState({
+        snapTempo: true,
+        directPitch: false,
+        livePitch: true,
+      });
+    } else {
+      flushDjHudDom();
+    }
     win.classList.remove("chrome-window--dragging");
     document.body.classList.remove("chrome-ui--window-dragging");
     try {
@@ -639,6 +666,31 @@ function applyRubberBandPitchImmediate() {
   }
 }
 
+function applyRubberBandPitchLive() {
+  if (!exhibitionRb || !exhibitionGraphReady) return;
+
+  const now = performance.now();
+  if (now - exhibitionRbLastLivePitchAt < RB_PITCH_LIVE_INTERVAL_MS) return;
+
+  const target = clampSafeRatio(djPctToPitchRatio(djState.Pitch));
+  if (!Number.isFinite(target) || target <= 0) return;
+
+  if (
+    Number.isFinite(exhibitionRbLastPitch) &&
+    Math.abs(target - exhibitionRbLastPitch) < RB_PITCH_LIVE_MIN_DIFF
+  ) {
+    return;
+  }
+
+  try {
+    exhibitionRb.setPitch(target);
+    exhibitionRbLastPitch = target;
+    exhibitionRbLastLivePitchAt = now;
+  } catch (err) {
+    console.warn("[exhibition-audio] setPitch(라이브) 실패:", err);
+  }
+}
+
 function ensureExhibitionMediaPlaying() {
   const el = exhibitionMediaEl;
   if (!el || el.ended) return;
@@ -728,7 +780,11 @@ function scheduleDeferredExhibitionAudioSync() {
   if (exhibitionAudioGraphRaf) return;
   exhibitionAudioGraphRaf = requestAnimationFrame(() => {
     exhibitionAudioGraphRaf = 0;
-    runExhibitionAudioGraphSync({ snapTempo: false, directPitch: false });
+    runExhibitionAudioGraphSync({
+      snapTempo: false,
+      directPitch: false,
+      livePitch: true,
+    });
   });
 }
 
@@ -773,8 +829,8 @@ function runExhibitionAudioGraphSync(options = {}) {
   if (exhibitionRb) {
     if (options.directPitch === true) {
       applyRubberBandPitchImmediate();
-    } else {
-      requestPitchServoFrame();
+    } else if (options.livePitch === true) {
+      applyRubberBandPitchLive();
     }
   }
 }
