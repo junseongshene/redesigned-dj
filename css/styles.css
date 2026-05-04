@@ -52,6 +52,17 @@ body.chrome-ui--tab-tearing {
   user-select: none;
 }
 
+/* 전시: 상시 재생 오디오 (레이아웃·포커스에 영향 없음) */
+.exhibition-audio {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  height: 4px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .page-shell {
   min-height: 100dvh;
   display: flex;
@@ -164,7 +175,8 @@ body.chrome-ui--tab-tearing {
   gap: 8px;
   flex-shrink: 0;
   padding: 0 12px 10px 14px;
-  pointer-events: none;
+  /* 제목줄 드래그(믹스)는 트래픽 영역에서도 시작해야 함 — none이면 클릭이 창 뒤로 통과함 */
+  pointer-events: auto;
 }
 
 .chrome-traffic__dot {
@@ -477,4 +489,44 @@ body.chrome-ui--tab-tearing {
   min-height: 120px;
   background: #ffffff;
   border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* —— 믹스 HUD (body 직계 · fixed로 항상 우하단) —— */
+.dj-param-hud {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 2147483646;
+  min-width: 148px;
+  min-height: 1em;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #e8eaed;
+  background: rgba(32, 33, 36, 0.94);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  user-select: none;
+}
+
+.dj-param-hud__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.dj-param-hud__row + .dj-param-hud__row {
+  margin-top: 4px;
+}
+
+.dj-param-hud__name {
+  color: #9aa0a6;
+}
+
+.dj-param-hud__val {
+  font-variant-numeric: tabular-nums;
+  color: #fdd663;
 }

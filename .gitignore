@@ -13,8 +13,11 @@ Thumbs.db
 *.log
 npm-debug.log*
 
-# Dependencies (추후 Node 사용 시)
+# Dependencies
 node_modules/
+
+# rubberband-web postinstall 산출물 (npm install 시 재생성)
+public/rubberband/
 
 # Build / cache
 dist/

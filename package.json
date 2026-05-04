@@ -1,0 +1,17 @@
+{
+  "name": "redesigned-dj-exhibition",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "postinstall": "node scripts/copy-rubberband.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "rubberband-web": "^0.2.1"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}
