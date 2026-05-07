@@ -598,7 +598,104 @@ function updateDjHudDom() {
         djState[name],
       )}%</span></div>`,
   ).join("");
+  maybeFireSiuEgg(); // ===== EASTER EGG =====
 }
+
+// ===== EASTER EGG START =====
+let siuEggArmed = true;
+let siuEggBuffer = null;
+let siuEggIR = null;
+let siuEggLoading = false;
+
+function buildSiuReverbIR(ctx) {
+  // 합성 임펄스 응답: 좌우 채널 노이즈를 지수감쇠시켜 홀 느낌 잔향.
+  const seconds = 2.6;
+  const decay = 2.4;
+  const rate = ctx.sampleRate;
+  const len = Math.floor(seconds * rate);
+  const buf = ctx.createBuffer(2, len, rate);
+  for (let c = 0; c < 2; c++) {
+    const data = buf.getChannelData(c);
+    for (let i = 0; i < len; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+  }
+  return buf;
+}
+
+async function ensureSiuAudioReady() {
+  if (siuEggBuffer || siuEggLoading) return;
+  if (!exhibitionCtx) return;
+  siuEggLoading = true;
+  try {
+    const res = await fetch("./audio/siuu.mp3");
+    const arr = await res.arrayBuffer();
+    siuEggBuffer = await exhibitionCtx.decodeAudioData(arr);
+    siuEggIR = buildSiuReverbIR(exhibitionCtx);
+  } catch (err) {
+    console.warn("[siu-egg] 사운드 로드 실패:", err);
+  } finally {
+    siuEggLoading = false;
+  }
+}
+
+function playSiuSound() {
+  if (!exhibitionCtx || !siuEggBuffer || !siuEggIR) return;
+  if (exhibitionCtx.state === "suspended") {
+    exhibitionCtx.resume().catch(() => {});
+  }
+
+  const src = exhibitionCtx.createBufferSource();
+  src.buffer = siuEggBuffer;
+
+  const dry = exhibitionCtx.createGain();
+  dry.gain.value = 0.7;
+
+  const wet = exhibitionCtx.createGain();
+  wet.gain.value = 0.55;
+
+  const conv = exhibitionCtx.createConvolver();
+  conv.buffer = siuEggIR;
+
+  // 잔향에 약간의 저역 컷을 줘서 깔끔하게.
+  const wetHP = exhibitionCtx.createBiquadFilter();
+  wetHP.type = "highpass";
+  wetHP.frequency.value = 220;
+
+  src.connect(dry).connect(exhibitionCtx.destination);
+  src.connect(wetHP).connect(conv).connect(wet).connect(exhibitionCtx.destination);
+
+  src.start();
+  src.onended = () => {
+    try {
+      src.disconnect();
+      dry.disconnect();
+      wet.disconnect();
+      conv.disconnect();
+      wetHP.disconnect();
+    } catch {
+      /* */
+    }
+  };
+}
+
+function maybeFireSiuEgg() {
+  const allAt67 = DJ_CHANNELS.every((ch) => Math.round(djState[ch]) === 67);
+  if (!allAt67) {
+    siuEggArmed = true;
+    return;
+  }
+  if (!siuEggArmed) return;
+  siuEggArmed = false;
+  const el = document.getElementById("siu-egg");
+  if (el) {
+    el.classList.remove("is-firing");
+    void el.offsetWidth;
+    el.classList.add("is-firing");
+  }
+  ensureSiuAudioReady().then(playSiuSound);
+}
+// ===== EASTER EGG END =====
 
 /** 드래그 중: 오디오는 즉시, HUD 문자열만 프레임당 한 번(메인 스레드 막힘 방지) */
 function scheduleDjHudDom() {
