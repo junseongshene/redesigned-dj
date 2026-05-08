@@ -16,6 +16,9 @@ const DJ_CHANNELS = ["Volume", "Pitch", "Tempo", "Bass"];
 /** 창 중심이 이 픽셀만큼 움직일 때 약 1% 변화 (클수록 둔감). 예전 대비 약 3배 둔하게. */
 const DJ_WIN_PX_PER_PERCENT = 20;
 
+/** 창이 화면 가장자리에서 완전히 붙지 않게 남길 여백(px) */
+const WINDOW_DRAG_VIEWPORT_PADDING = 0;
+
 const djState = Object.fromEntries(DJ_CHANNELS.map((name) => [name, 50]));
 
 /** 배경 트랙 Web Audio (Rubber Band: 피치만 / 템포: media playbackRate + preservesPitch / lowshelf·gain) */
@@ -83,6 +86,33 @@ function applyTranslate(win, dx, dy) {
   win.dataset.dx = String(dx);
   win.dataset.dy = String(dy);
   win.style.transform = `translate(${dx}px, ${dy}px)`;
+}
+
+function getClampedTranslateForViewport(win, dx, dy) {
+  const pad = WINDOW_DRAG_VIEWPORT_PADDING;
+
+  const currentDx = Number(win.dataset.dx || 0);
+  const currentDy = Number(win.dataset.dy || 0);
+
+  const r = win.getBoundingClientRect();
+
+  // 현재 rect는 이미 기존 translate가 적용된 상태이므로,
+  // 기존 translate를 빼서 원래 grid 위치 기준 rect를 복원한다.
+  const baseLeft = r.left - currentDx;
+  const baseTop = r.top - currentDy;
+  const width = r.width;
+  const height = r.height;
+
+  const minDx = pad - baseLeft;
+  const maxDx = window.innerWidth - pad - (baseLeft + width);
+
+  const minDy = pad - baseTop;
+  const maxDy = window.innerHeight - pad - (baseTop + height);
+
+  return {
+    dx: clamp(dx, minDx, maxDx),
+    dy: clamp(dy, minDy, maxDy),
+  };
 }
 
 function selectWindow(selected) {
@@ -507,7 +537,8 @@ function beginWindowDrag(e, win, handle, stage, tune) {
       win.style.left = `${Math.round(left)}px`;
       win.style.top = `${Math.round(top)}px`;
     } else {
-      applyTranslate(win, originDx + mx, originDy + my);
+      const next = getClampedTranslateForViewport(win, originDx + mx, originDy + my);
+      applyTranslate(win, next.dx, next.dy);
     }
 
     if (channelKey) {
