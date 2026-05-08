@@ -4,8 +4,10 @@ const DRAG_THRESHOLD_PX = 6;
 /** DJ 탭은 전부 채널명이라, 가로가 세로보다 조금만 커도 스크럽으로 오인됨 → 뜯기가 막힘. 가로가 이만큼(px) 더 커야 스크럽. */
 const TAB_SCRUB_HORIZONTAL_LEAD_PX = 10;
 
-/** 창 합치기: 두 창의 탭스트립이 이 비율 이상 겹쳐야 병합(작은 쪽 면적 기준) */
-const MERGE_TABSTRIP_OVERLAP_MIN = 0.8;
+/** 창 합치기: 창 전체 rect가 이 비율 이상 겹쳐야 병합(작은 쪽 면적 기준) */
+const MERGE_WINDOW_OVERLAP_MIN = 0.8;
+/** 창 겹침 40%부터 다음 곡으로 크로스페이드 시작 */
+const MERGE_CROSSFADE_START = 0.4;
 
 /** window 포인터 리스너는 캡처로 등록(드래그 중 move/up이 묻히지 않게) */
 const POINTER_WIN_OPTS = { capture: true };
@@ -23,9 +25,14 @@ const djState = Object.fromEntries(DJ_CHANNELS.map((name) => [name, 50]));
 
 /** 배경 트랙 Web Audio (Rubber Band: 피치만 / 템포: media playbackRate + preservesPitch / lowshelf·gain) */
 let exhibitionMediaEl = null;
+let exhibitionTransitionEl = null;
 let exhibitionCtx = null;
 let exhibitionRb = null;
+let exhibitionRbTransition = null;
 let exhibitionBass = null;
+let exhibitionTransitionBass = null;
+let exhibitionDeckGain = null;
+let exhibitionTransitionGain = null;
 let exhibitionMaster = null;
 let exhibitionGraphReady = false;
 
@@ -34,6 +41,23 @@ let exhibitionRbLastPitch = NaN;
 /** 볼륨·베이스는 값이 바뀔 때만 AudioParam에 써서 그래프 불필요 갱신 방지 */
 let lastAppliedVolPct = NaN;
 let lastAppliedBassPct = NaN;
+let mergeCrossfadeActive = false;
+let mergeCrossfadeCurrentTrack = null;
+let mergeCrossfadeCurrentIndex = 0;
+let mergeCrossfadeArmedIndex = -1;
+let mergeCrossfadeArmedReady = false;
+
+const MERGE_CROSSFADE_PLAYLIST = [
+  { src: "./audio/08. Aphex Twin - We Are the Music Makers.mp3", offsetSec: 0 },
+  { src: "./audio/01. Aphex Twin - Xtal.mp3", offsetSec: 0 },
+  { src: "./audio/04. Aphex Twin - Ageispolis.mp3", offsetSec: 55 },
+  { src: "./audio/06. Aphex Twin - Green Calx.mp3", offsetSec: 12 },
+  { src: "./audio/10. Aphex Twin - Ptolemy.mp3", offsetSec: 0 },
+];
+
+function getNextMergeCrossfadeIndex() {
+  return (mergeCrossfadeCurrentIndex + 1) % MERGE_CROSSFADE_PLAYLIST.length;
+}
 
 /** 드래그 중: 게인·베이스·playbackRate를 포인터마다가 아니라 프레임당 1회만 적용 */
 let exhibitionAudioGraphRaf = 0;
@@ -54,6 +78,10 @@ let exhibitionRbLastLivePitchAt = 0;
 /** 템포는 playbackRate로만 — 드래그 중 급변 완화용 스무딩(손 떼면 스냅) */
 let exhibitionTempoPlaybackSmoothed = 1;
 const DJ_TEMPO_PLAYBACK_SMOOTH = 0.68;
+
+/** 15초 무입력 시 전시 화면 자동 리프레시 */
+const INACTIVITY_RELOAD_MS = 15000;
+let inactivityReloadTimer = 0;
 
 /** HUD DOM은 rAF로 묶음 */
 let djHudDomRaf = 0;
@@ -240,27 +268,51 @@ function mergeAllTabs(sourceStrip, targetStrip, clientX, clientY) {
   clearDropMarkers();
 }
 
-function rectsOverlapRatio(a, b, minRatio) {
+function overlapRatioAgainstSmallerRect(a, b) {
   const x1 = Math.max(a.left, b.left);
   const x2 = Math.min(a.right, b.right);
   const y1 = Math.max(a.top, b.top);
   const y2b = Math.min(a.bottom, b.bottom);
-  if (x2 <= x1 || y2b <= y1) return false;
+  if (x2 <= x1 || y2b <= y1) return 0;
   const inter = (x2 - x1) * (y2b - y1);
   const areaA = a.width * a.height;
   const areaB = b.width * b.height;
   const smaller = Math.min(areaA, areaB);
-  return smaller > 0 && inter / smaller >= minRatio;
+  if (smaller <= 0) return 0;
+  return inter / smaller;
 }
 
-function shouldMergeWindowToStrip(draggedWin, targetStrip, clientX, clientY) {
+function windowOverlapRatio(aWin, bWin) {
+  return overlapRatioAgainstSmallerRect(
+    aWin.getBoundingClientRect(),
+    bWin.getBoundingClientRect(),
+  );
+}
+
+function rectsOverlapRatio(a, b, minRatio) {
+  return overlapRatioAgainstSmallerRect(a, b) >= minRatio;
+}
+
+function shouldMergeWindowToStrip(draggedWin, targetStrip) {
   const targetWin = targetStrip.closest(".chrome-window");
   if (!targetWin || targetWin === draggedWin) return false;
-  const sourceStrip = draggedWin.querySelector(".chrome-tabstrip__tabs");
-  if (!sourceStrip) return false;
-  const sa = sourceStrip.getBoundingClientRect();
-  const ta = targetStrip.getBoundingClientRect();
-  return rectsOverlapRatio(sa, ta, MERGE_TABSTRIP_OVERLAP_MIN);
+  const draggedRect = draggedWin.getBoundingClientRect();
+  const targetRect = targetWin.getBoundingClientRect();
+  return rectsOverlapRatio(draggedRect, targetRect, MERGE_WINDOW_OVERLAP_MIN);
+}
+
+function pickBestOverlapTargetWin(draggedWin, stage) {
+  let bestWin = null;
+  let bestRatio = 0;
+  for (const other of stage.querySelectorAll(".chrome-window")) {
+    if (other === draggedWin) continue;
+    const r = windowOverlapRatio(draggedWin, other);
+    if (r > bestRatio) {
+      bestRatio = r;
+      bestWin = other;
+    }
+  }
+  return { bestWin, bestRatio };
 }
 
 function resetTabDragStyles(tab) {
@@ -541,6 +593,9 @@ function beginWindowDrag(e, win, handle, stage, tune) {
       applyTranslate(win, next.dx, next.dy);
     }
 
+    const { bestRatio } = pickBestOverlapTargetWin(win, stage);
+    applyMergeCrossfadePreview(bestRatio);
+
     if (channelKey) {
       const r = win.getBoundingClientRect();
       const cx = (r.left + r.right) / 2;
@@ -600,8 +655,14 @@ function beginWindowDrag(e, win, handle, stage, tune) {
           if (other === win) continue;
           const ts = other.querySelector(".chrome-tabstrip__tabs");
           if (!ts) continue;
-          if (shouldMergeWindowToStrip(win, ts, ev.clientX, ev.clientY)) {
+          if (shouldMergeWindowToStrip(win, ts)) {
+            const overlapAtMerge = windowOverlapRatio(win, other);
             mergeAllTabs(sourceStrip, ts, ev.clientX, ev.clientY);
+            if (overlapAtMerge >= MERGE_WINDOW_OVERLAP_MIN) {
+              finalizeMergeCrossfadeAfterMerge();
+            } else {
+              resetMergeCrossfadeState();
+            }
             if (getTabs(sourceStrip).length === 0) {
               win.remove();
               selectWindow(other);
@@ -613,6 +674,7 @@ function beginWindowDrag(e, win, handle, stage, tune) {
         }
       }
     }
+    resetMergeCrossfadeState();
   };
 
   window.addEventListener("pointermove", onMove, POINTER_WIN_OPTS);
@@ -761,6 +823,21 @@ function clampSafeRatio(x) {
   return clamp(x, DJ_RB_RATIO_MIN, DJ_RB_RATIO_MAX);
 }
 
+function crossfadeTFromWindowOverlap(overlapRatio) {
+  const t =
+    (overlapRatio - MERGE_CROSSFADE_START) /
+    (MERGE_WINDOW_OVERLAP_MIN - MERGE_CROSSFADE_START);
+  return clamp(t, 0, 1);
+}
+
+function linearCrossfadeGains(t) {
+  const x = clamp(t, 0, 1);
+  return {
+    from: 1 - x,
+    to: x,
+  };
+}
+
 /** Pitch: %↑ → 체감 위로(README setPitch 배수) */
 function djPctToPitchRatio(pct) {
   const oct = ((pct - 50) / 50) * DJ_PITCH_OCT_RANGE;
@@ -783,19 +860,28 @@ function cancelPitchServo() {
 /** 손 뗌·초기화: 서보 중단 후 목표 피치로 한 번에 맞춤 */
 function applyRubberBandPitchImmediate() {
   cancelPitchServo();
-  if (!exhibitionRb) return;
+  if (!exhibitionRb && !exhibitionRbTransition) return;
   const target = clampSafeRatio(djPctToPitchRatio(djState.Pitch));
   if (!Number.isFinite(target) || target <= 0) return;
-  try {
-    exhibitionRb.setPitch(target);
-    exhibitionRbLastPitch = target;
-  } catch (err) {
-    console.warn("[exhibition-audio] setPitch 실패:", err);
+  if (exhibitionRb) {
+    try {
+      exhibitionRb.setPitch(target);
+      exhibitionRbLastPitch = target;
+    } catch (err) {
+      console.warn("[exhibition-audio] setPitch 실패:", err);
+    }
+  }
+  if (exhibitionRbTransition) {
+    try {
+      exhibitionRbTransition.setPitch(target);
+    } catch (err) {
+      console.warn("[exhibition-audio] setPitch(transition) 실패:", err);
+    }
   }
 }
 
 function applyRubberBandPitchLive() {
-  if (!exhibitionRb || !exhibitionGraphReady) return;
+  if ((!exhibitionRb && !exhibitionRbTransition) || !exhibitionGraphReady) return;
 
   const now = performance.now();
   if (now - exhibitionRbLastLivePitchAt < RB_PITCH_LIVE_INTERVAL_MS) return;
@@ -811,7 +897,8 @@ function applyRubberBandPitchLive() {
   }
 
   try {
-    exhibitionRb.setPitch(target);
+    if (exhibitionRb) exhibitionRb.setPitch(target);
+    if (exhibitionRbTransition) exhibitionRbTransition.setPitch(target);
     exhibitionRbLastPitch = target;
     exhibitionRbLastLivePitchAt = now;
   } catch (err) {
@@ -825,6 +912,10 @@ function ensureExhibitionMediaPlaying() {
   if (el.paused) {
     const p = el.play();
     if (p !== undefined) p.catch(() => {});
+  }
+  if (mergeCrossfadeActive && exhibitionTransitionEl?.paused) {
+    const p2 = exhibitionTransitionEl.play();
+    if (p2 !== undefined) p2.catch(() => {});
   }
 }
 
@@ -882,6 +973,9 @@ function applyExhibitionTempoPlayback(options = {}) {
     exhibitionTempoPlaybackSmoothed = target;
     try {
       exhibitionMediaEl.playbackRate = clampSafeRatio(target);
+      if (exhibitionTransitionEl) {
+        exhibitionTransitionEl.playbackRate = clampSafeRatio(target);
+      }
     } catch {
       /* */
     }
@@ -897,6 +991,12 @@ function applyExhibitionTempoPlayback(options = {}) {
   try {
     if (Math.abs(exhibitionMediaEl.playbackRate - rate) > 1e-5) {
       exhibitionMediaEl.playbackRate = rate;
+    }
+    if (
+      exhibitionTransitionEl &&
+      Math.abs(exhibitionTransitionEl.playbackRate - rate) > 1e-5
+    ) {
+      exhibitionTransitionEl.playbackRate = rate;
     }
   } catch {
     /* */
@@ -949,6 +1049,7 @@ function runExhibitionAudioGraphSync(options = {}) {
   ) {
     const bassDb = pctToDbFromCenter(b, 12);
     exhibitionBass.gain.value = bassDb;
+    if (exhibitionTransitionBass) exhibitionTransitionBass.gain.value = bassDb;
     lastAppliedBassPct = b;
   }
 
@@ -975,10 +1076,118 @@ function syncExhibitionAudioFromDjState(options = {}) {
   runExhibitionAudioGraphSync(options);
 }
 
-async function initExhibitionWebAudioGraph(el) {
+function resetMergeCrossfadeState() {
+  mergeCrossfadeActive = false;
+  mergeCrossfadeCurrentTrack = null;
+  if (exhibitionDeckGain) exhibitionDeckGain.gain.value = 1;
+  if (exhibitionTransitionGain) exhibitionTransitionGain.gain.value = 0;
+  if (exhibitionTransitionEl) {
+    exhibitionTransitionEl.pause();
+  }
+}
+
+function armNextMergeCrossfadeTrack() {
+  if (!exhibitionTransitionEl) return;
+  if (MERGE_CROSSFADE_PLAYLIST.length <= 1) {
+    mergeCrossfadeArmedIndex = -1;
+    mergeCrossfadeArmedReady = false;
+    return;
+  }
+  const nextIndex = getNextMergeCrossfadeIndex();
+  if (mergeCrossfadeArmedIndex === nextIndex && mergeCrossfadeArmedReady) {
+    return;
+  }
+  const track = MERGE_CROSSFADE_PLAYLIST[nextIndex];
+  mergeCrossfadeArmedReady = false;
+  mergeCrossfadeArmedIndex = nextIndex;
+  exhibitionTransitionEl.src = encodePathSegmentsPreservingSlashes(track.src);
+  exhibitionTransitionEl.preload = "auto";
+  const onArmed = () => {
+    try {
+      exhibitionTransitionEl.currentTime = track.offsetSec;
+    } catch {
+      /* */
+    }
+    exhibitionTransitionEl.pause();
+    mergeCrossfadeArmedReady = true;
+  };
+  if (exhibitionTransitionEl.readyState >= 1) {
+    onArmed();
+  } else {
+    exhibitionTransitionEl.addEventListener("loadedmetadata", onArmed, { once: true });
+    exhibitionTransitionEl.load();
+  }
+}
+
+function startMergeCrossfadeIfNeeded() {
+  if (
+    mergeCrossfadeActive ||
+    !exhibitionTransitionEl ||
+    MERGE_CROSSFADE_PLAYLIST.length <= 1
+  ) {
+    return;
+  }
+  armNextMergeCrossfadeTrack();
+  if (!mergeCrossfadeArmedReady) return;
+  const track = MERGE_CROSSFADE_PLAYLIST[mergeCrossfadeArmedIndex];
+  mergeCrossfadeCurrentTrack = track;
+  mergeCrossfadeActive = true;
+  const p = exhibitionTransitionEl.play();
+  if (p !== undefined) p.catch(() => {});
+}
+
+function applyMergeCrossfadePreview(overlapRatio) {
+  if (!exhibitionDeckGain || !exhibitionTransitionGain) return;
+  if (
+    overlapRatio < MERGE_CROSSFADE_START ||
+    MERGE_CROSSFADE_PLAYLIST.length <= 1
+  ) {
+    resetMergeCrossfadeState();
+    return;
+  }
+  startMergeCrossfadeIfNeeded();
+  if (!mergeCrossfadeActive) return;
+  const t = crossfadeTFromWindowOverlap(overlapRatio);
+  const g = linearCrossfadeGains(t);
+  exhibitionDeckGain.gain.value = g.from;
+  exhibitionTransitionGain.gain.value = g.to;
+}
+
+function finalizeMergeCrossfadeAfterMerge() {
+  if (!mergeCrossfadeActive || !mergeCrossfadeCurrentTrack || !exhibitionMediaEl)
+    return;
+  const nextSrc = encodePathSegmentsPreservingSlashes(mergeCrossfadeCurrentTrack.src);
+  const nextTime = exhibitionTransitionEl?.currentTime ?? mergeCrossfadeCurrentTrack.offsetSec;
+  exhibitionMediaEl.src = nextSrc;
+  const snap = () => {
+    try {
+      exhibitionMediaEl.currentTime = nextTime;
+    } catch {
+      /* */
+    }
+    const p = exhibitionMediaEl.play();
+    if (p !== undefined) p.catch(() => {});
+  };
+  if (exhibitionMediaEl.readyState >= 1) {
+    snap();
+  } else {
+    exhibitionMediaEl.addEventListener("loadedmetadata", snap, { once: true });
+  }
+  if (mergeCrossfadeArmedIndex >= 0) {
+    mergeCrossfadeCurrentIndex = mergeCrossfadeArmedIndex;
+  } else {
+    mergeCrossfadeCurrentIndex = getNextMergeCrossfadeIndex();
+  }
+  resetMergeCrossfadeState();
+  armNextMergeCrossfadeTrack();
+}
+
+async function initExhibitionWebAudioGraph(el, transitionEl) {
   if (exhibitionGraphReady) return;
   exhibitionMediaEl = el;
+  exhibitionTransitionEl = transitionEl || null;
   el.volume = 1;
+  if (exhibitionTransitionEl) exhibitionTransitionEl.volume = 1;
   exhibitionTempoPlaybackSmoothed = 1;
   try {
     el.preservesPitch = true;
@@ -998,9 +1207,21 @@ async function initExhibitionWebAudioGraph(el) {
   exhibitionBass.type = "lowshelf";
   exhibitionBass.frequency.value = 220;
   exhibitionBass.Q.value = 0.85;
+  exhibitionTransitionBass = exhibitionCtx.createBiquadFilter();
+  exhibitionTransitionBass.type = "lowshelf";
+  exhibitionTransitionBass.frequency.value = 220;
+  exhibitionTransitionBass.Q.value = 0.85;
+
+  exhibitionDeckGain = exhibitionCtx.createGain();
+  exhibitionDeckGain.gain.value = 1;
+  exhibitionTransitionGain = exhibitionCtx.createGain();
+  exhibitionTransitionGain.gain.value = 0;
 
   exhibitionMaster = exhibitionCtx.createGain();
   exhibitionMaster.gain.value = 1;
+  const srcTransition = exhibitionTransitionEl
+    ? exhibitionCtx.createMediaElementSource(exhibitionTransitionEl)
+    : null;
 
   const workletUrl = new URL(
     "rubberband/rubberband-processor.js",
@@ -1025,13 +1246,49 @@ async function initExhibitionWebAudioGraph(el) {
     src.connect(exhibitionBass);
   }
 
-  exhibitionBass.connect(exhibitionMaster);
+  if (srcTransition) {
+    try {
+      exhibitionRbTransition = await createRubberBandNode(
+        exhibitionCtx,
+        workletUrl,
+        {},
+      );
+      try {
+        exhibitionRbTransition.setTempo(1);
+      } catch {
+        /* */
+      }
+      srcTransition.connect(exhibitionRbTransition);
+      exhibitionRbTransition.connect(exhibitionTransitionBass);
+    } catch (err) {
+      console.warn(
+        "[exhibition-audio] Rubber Band(transition) 실패 — 전환곡 피치 없음:",
+        err,
+      );
+      exhibitionRbTransition = null;
+      srcTransition.connect(exhibitionTransitionBass);
+    }
+  } else {
+    exhibitionRbTransition = null;
+  }
+
+  exhibitionBass.connect(exhibitionDeckGain);
+  exhibitionDeckGain.connect(exhibitionMaster);
+  if (srcTransition) {
+    exhibitionTransitionBass.connect(exhibitionTransitionGain);
+    exhibitionTransitionGain.connect(exhibitionMaster);
+  }
   exhibitionMaster.connect(exhibitionCtx.destination);
 
   exhibitionGraphReady = true;
   exhibitionRbLastPitch = NaN;
   lastAppliedVolPct = NaN;
   lastAppliedBassPct = NaN;
+  mergeCrossfadeCurrentIndex = 0;
+  mergeCrossfadeArmedIndex = -1;
+  mergeCrossfadeArmedReady = false;
+  resetMergeCrossfadeState();
+  armNextMergeCrossfadeTrack();
   syncExhibitionAudioFromDjState({ snapTempo: true, directPitch: true });
 }
 
@@ -1104,15 +1361,50 @@ function encodePathSegmentsPreservingSlashes(href) {
   }
 }
 
+function scheduleInactivityReload() {
+  if (inactivityReloadTimer) clearTimeout(inactivityReloadTimer);
+  inactivityReloadTimer = window.setTimeout(() => {
+    window.location.reload();
+  }, INACTIVITY_RELOAD_MS);
+}
+
+function installInactivityReload(stage) {
+  const markActive = () => {
+    scheduleInactivityReload();
+  };
+  const opts = { capture: true, passive: true };
+  window.addEventListener("pointerdown", markActive, opts);
+  window.addEventListener("pointermove", markActive, opts);
+  window.addEventListener("wheel", markActive, opts);
+  window.addEventListener("keydown", markActive, opts);
+  window.addEventListener("touchstart", markActive, opts);
+  if (stage) {
+    stage.addEventListener("pointerup", markActive, opts);
+    stage.addEventListener("pointercancel", markActive, opts);
+  }
+  scheduleInactivityReload();
+}
+
 async function initExhibitionAudio() {
   const el = document.getElementById("exhibition-audio");
+  let transitionEl = document.getElementById("exhibition-audio-transition");
+  if (!transitionEl) {
+    transitionEl = document.createElement("audio");
+    transitionEl.id = "exhibition-audio-transition";
+    transitionEl.className = "exhibition-audio";
+    transitionEl.loop = true;
+    transitionEl.playsInline = true;
+    transitionEl.preload = "auto";
+    transitionEl.setAttribute("aria-hidden", "true");
+    document.body.appendChild(transitionEl);
+  }
   if (!el) return;
   const rawSrc = el.getAttribute("src");
   if (rawSrc) {
     el.src = encodePathSegmentsPreservingSlashes(rawSrc);
   }
 
-  await initExhibitionWebAudioGraph(el);
+  await initExhibitionWebAudioGraph(el, transitionEl);
 
   const tryPlay = () => {
     const p = el.play();
@@ -1134,6 +1426,7 @@ async function initExhibitionAudio() {
 async function init() {
   const stage = document.querySelector(".browser-stage");
   if (stage) attachStage(stage);
+  installInactivityReload(stage);
   renderDjHud();
   await initExhibitionAudio();
 }
