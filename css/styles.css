@@ -1,7 +1,16 @@
-/*
-  Chrome macOS — Chrome Refresh 2023 / Material You 전시용.
-  포커스: 헤더 #d3e3fd, 흰 캡슐 옴니박스(G만), 공유·프로필·메뉴. 비포커스: 헤더 #f1f3f4. 본문 비움.
-*/
+/* =========================================================
+   Redesigned DJ — Chrome / Figma browser skin
+   - JS class 구조 유지
+   - 4분면 고정
+   - 화면 스크롤 방지
+   - 드래그 시 윈도우 잘림 방지
+   - HUD 우측 하단 fixed 유지
+   - --figma-tab-h 주석 상태 유지
+========================================================= */
+
+/* =========================
+   Reset / Tokens
+========================= */
 
 *,
 *::before,
@@ -10,49 +19,70 @@
 }
 
 :root {
-  --m3-header-active: #d3e3fd;
-  --m3-header-inactive: #f1f3f4;
-  --m3-tab-on-active: #ffffff;
-  --m3-tab-on-inactive: #ebebeb;
-  --m3-omnibox-fill: #ffffff;
-  --chrome-text: #202124;
-  --chrome-text-muted: #5f6368;
-  --tab-font-size: 12px;
-  --tab-height: 32px;
-  --tab-row-height: 40px;
-  --toolbar-row-height: 38px;
-  --window-radius: 10px;
-  --font-chrome: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --figma-stage-bg: #f5f6f8;
+
+  --figma-window-radius: 12px;
+  --figma-window-border: rgba(37, 43, 54, 0.14);
+  --figma-window-shadow:
+    0 18px 44px rgba(28, 38, 58, 0.14),
+    0 4px 12px rgba(28, 38, 58, 0.08);
+
+  --figma-top-active: #e7edf8;
+  --figma-top-inactive: #edf0f4;
+  --figma-toolbar: #ffffff;
+  --figma-page: #ffffff;
+
+  --figma-tab-active: #ffffff;
+  --figma-tab-inactive: transparent;
+  --figma-tab-hover: rgba(67, 76, 92, 0.08);
+
+  --figma-omnibox: #f1f3f4;
+
+  --figma-text: #202124;
+  --figma-muted: #5f6368;
+
+  --figma-tabstrip-h: 40px;
+  /* --figma-tab-h: 32px; */
+  --figma-toolbar-h: 40px;
+
+  --hud-bg: rgba(32, 33, 36, 0.94);
+  --hud-text: #e8eaed;
+  --hud-muted: #9aa0a6;
+  --hud-accent: #fdd663;
 }
+
+/* =========================
+   Base / Fixed Viewport
+========================= */
 
 html,
 body {
+  width: 100%;
   height: 100%;
+  margin: 0;
+  overflow: hidden;
 }
 
 body.exhibition-body {
+  width: 100%;
+  height: 100%;
   margin: 0;
-  min-height: 100%;
-  font-family: var(--font-chrome);
+  overflow: hidden;
+
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
   font-size: 12px;
-  background: #ffffff;
-  color: var(--chrome-text);
+  color: var(--figma-text);
+  background: var(--figma-stage-bg);
   -webkit-font-smoothing: antialiased;
 }
 
-body.chrome-ui--window-dragging {
-  cursor: grabbing;
-  touch-action: none;
-  user-select: none;
-}
-
+body.chrome-ui--window-dragging,
 body.chrome-ui--tab-tearing {
   cursor: grabbing;
   touch-action: none;
   user-select: none;
 }
 
-/* 전시: 상시 재생 오디오 (레이아웃·포커스에 영향 없음) */
 .exhibition-audio {
   position: fixed;
   left: 0;
@@ -63,94 +93,122 @@ body.chrome-ui--tab-tearing {
   pointer-events: none;
 }
 
+/* =========================
+   Stage Layout
+========================= */
+
 .page-shell {
-  min-height: 100dvh;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+
   display: flex;
   flex-direction: column;
-  padding: clamp(16px, 3vw, 40px);
+
+  padding: clamp(16px, 2vw, 28px);
+  overflow: visible;
 }
 
 .browser-stage {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+
   position: relative;
+
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(320px, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: clamp(6px, 1.2vw, 12px);
+
   align-content: stretch;
-  min-height: min(72dvh, 760px);
+  overflow: visible;
 }
 
-@media (max-width: 900px) {
-  .browser-stage {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
-  }
-}
+/* =========================
+   Window Layering
+========================= */
 
 .chrome-window {
   position: relative;
   z-index: 1;
+
   display: flex;
-  min-height: 0;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+
+  overflow: visible;
   transform: translate(0, 0);
+  isolation: isolate;
+}
+
+.chrome-window--selected {
+  z-index: 10;
 }
 
 .chrome-window--floated {
   position: absolute;
+  z-index: 20;
   transform: none !important;
 }
 
-.chrome-window--selected {
-  z-index: 4;
-}
-
-.chrome-window--selected .chrome-frame {
-  background: var(--m3-header-active);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.1),
-    0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.chrome-window:not(.chrome-window--selected) .chrome-frame {
-  background: var(--m3-header-inactive);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
 .chrome-window--dragging {
-  z-index: 6;
+  z-index: 30;
 }
 
-.chrome-window--dragging.chrome-window--selected .chrome-frame {
-  box-shadow:
-    0 14px 36px rgba(0, 0, 0, 0.14),
-    0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.chrome-window--dragging:not(.chrome-window--selected) .chrome-frame {
-  box-shadow:
-    0 12px 32px rgba(0, 0, 0, 0.12),
-    0 2px 8px rgba(0, 0, 0, 0.08);
-}
+/* =========================
+   Window Frame
+========================= */
 
 .chrome-frame {
+  position: relative;
+  isolation: isolate;
+
   flex: 1;
   display: flex;
   flex-direction: column;
+
   min-width: 0;
-  border-radius: var(--window-radius);
+  min-height: 0;
+  height: 100%;
+
   overflow: hidden;
-  transition: box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+
+  border-radius: var(--figma-window-radius);
+  border: 1px solid var(--figma-window-border);
+  background: var(--figma-top-inactive);
+  box-shadow:
+    0 6px 18px rgba(28, 38, 58, 0.08),
+    0 1px 3px rgba(28, 38, 58, 0.06);
 }
 
-/* —— Tab strip (macOS) —— */
+.chrome-window--selected .chrome-frame {
+  background: var(--figma-top-active);
+  box-shadow: var(--figma-window-shadow);
+}
+
+.chrome-window--dragging .chrome-frame {
+  box-shadow:
+    0 24px 58px rgba(28, 38, 58, 0.2),
+    0 8px 18px rgba(28, 38, 58, 0.12);
+}
+
+/* =========================
+   Tab Strip
+========================= */
+
 .chrome-tabstrip {
+  position: relative;
+  z-index: 1;
+
   flex-shrink: 0;
-  padding: 0;
+  height: var(--figma-tabstrip-h);
+  min-height: var(--figma-tabstrip-h);
+
   background: transparent;
+  border-bottom: 0;
+  overflow: visible;
 }
 
 .chrome-tabstrip--drag-handle {
@@ -164,26 +222,36 @@ body.chrome-ui--tab-tearing {
 .chrome-tabstrip__head {
   display: flex;
   align-items: flex-end;
-  min-height: var(--tab-row-height);
-  padding: 0 10px 0 0;
-  gap: 0;
+
+  height: var(--figma-tabstrip-h);
+  min-height: var(--figma-tabstrip-h);
+
+  padding: 0 8px 0 0;
+  overflow: visible;
 }
 
 .chrome-tabstrip__traffic {
   display: flex;
   align-items: center;
   gap: 8px;
+
+  width: 76px;
+  padding: 0 0 14px 13px;
+
   flex-shrink: 0;
-  padding: 0 12px 10px 14px;
-  /* 제목줄 드래그(믹스)는 트래픽 영역에서도 시작해야 함 — none이면 클릭이 창 뒤로 통과함 */
+  margin-left: 0;
+  order: 0;
+
   pointer-events: auto;
 }
 
 .chrome-traffic__dot {
   width: 12px;
   height: 12px;
+  flex-shrink: 0;
+
   border-radius: 50%;
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18);
 }
 
 .chrome-window--selected .chrome-traffic__dot--close {
@@ -199,315 +267,521 @@ body.chrome-ui--tab-tearing {
 }
 
 .chrome-window:not(.chrome-window--selected) .chrome-traffic__dot {
-  background: #c9cacb;
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.05);
+  background: #c7c8ca;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.08);
 }
 
 .chrome-tabstrip__tabs-surface {
   display: flex;
-  flex: 1;
   align-items: flex-end;
+
+  flex: 1;
   min-width: 0;
-  min-height: var(--tab-row-height);
-  padding-right: 8px;
-  background: transparent;
+  height: var(--figma-tabstrip-h);
+  min-height: var(--figma-tabstrip-h);
+
+  order: 0;
+  overflow: visible;
 }
 
 .chrome-tabstrip__tabs {
   position: relative;
+
   display: flex;
   align-items: flex-end;
+
   flex: 1;
   min-width: 0;
+  height: var(--figma-tabstrip-h);
+
   gap: 0;
   padding-right: 4px;
+  overflow: visible;
 }
 
 .chrome-tabstrip__tabs--drop-target::after {
   content: "";
   position: absolute;
   left: var(--drop-marker-x, 0);
-  bottom: 0;
+  bottom: 2px;
+
   width: 2px;
-  height: calc(var(--tab-height) + 8px);
+  height: 34px;
   margin-left: -1px;
+
   background: #1a73e8;
-  border-radius: 1px;
+  border-radius: 999px;
   pointer-events: none;
   z-index: 50;
 }
 
-/* Tabs — 헤더에 붙은 Chrome Refresh 탭 (여러 개일 때 너비 균등) */
+/* =========================
+   Tabs
+========================= */
+
 .chrome-tab {
   position: relative;
+  z-index: 1;
+
   display: flex;
   align-items: center;
   gap: 8px;
-  height: var(--tab-height);
+
+  height: var(--figma-tab-h, 32px);
   flex: 1 1 0;
-  min-width: 72px;
-  max-width: 200px;
-  padding: 7px 10px 7px 10px;
-  margin-right: 0;
-  font-size: var(--tab-font-size);
+  min-width: 96px;
+  max-width: 220px;
+
+  margin: 0;
+  padding: 7px 10px;
+
+  border: none;
+  border-radius: 9px 9px 0 0;
+  background: var(--figma-tab-inactive);
+  box-shadow: none;
+
+  color: var(--figma-muted);
+  font-size: 12px;
   line-height: 1;
   font-weight: 400;
-  border: none;
+  letter-spacing: -0.01em;
+
   cursor: grab;
-  z-index: 0;
   user-select: none;
   -webkit-user-select: none;
-  border-radius: 8px 8px 0 0;
 }
 
-/* 탭 1개 + 새 탭 버튼만 있을 때: 한 탭이 스트립 전체를 채우지 않게 */
 .chrome-tabstrip__tabs > .chrome-tab:first-child:nth-last-child(2) {
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: min(220px, 40vw);
+  flex: 0 1 210px;
+  min-width: 130px;
+  max-width: 220px;
+}
+
+.chrome-tab:hover {
+  background: var(--figma-tab-hover);
 }
 
 .chrome-window--selected .chrome-tab.chrome-tab--active {
-  background: var(--m3-tab-on-active);
-  color: var(--chrome-text);
-  z-index: 2;
+  z-index: 1;
+
   margin-bottom: -1px;
   padding-bottom: 8px;
-  box-shadow: none;
+
+  background: var(--figma-tab-active);
+  color: var(--figma-text);
+
+  box-shadow:
+    0 1px 0 var(--figma-tab-active),
+    1px 0 0 rgba(37, 43, 54, 0.04),
+    -1px 0 0 rgba(37, 43, 54, 0.04);
 }
 
 .chrome-window:not(.chrome-window--selected) .chrome-tab.chrome-tab--active {
-  background: var(--m3-tab-on-inactive);
-  color: #5f6368;
-  z-index: 1;
   margin-bottom: 0;
-  border-radius: 8px 8px 0 0;
+
+  background: #e4e6ea;
+  color: var(--figma-muted);
+  box-shadow: none;
 }
 
-.chrome-tab--inactive {
-  background: #dadce0;
-  color: #5f6368;
-  border-radius: 8px 8px 0 0;
+.chrome-tab.chrome-tab--inactive {
+  background: transparent;
+  color: var(--figma-muted);
+}
+
+/* Active tab bottom curves */
+.chrome-tab::before,
+.chrome-tab::after {
+  display: none;
+}
+
+.chrome-window--selected .chrome-tab.chrome-tab--active::before,
+.chrome-window--selected .chrome-tab.chrome-tab--active::after {
+  content: "";
+  display: block;
+
+  position: absolute;
+  bottom: 0;
+  z-index: -1;
+
+  width: 10px;
+  height: 10px;
+
+  background: transparent;
+  pointer-events: none;
+}
+
+.chrome-window--selected .chrome-tab.chrome-tab--active::before {
+  left: -10px;
+  border-bottom-right-radius: 10px;
+  box-shadow: 4px 4px 0 4px var(--figma-tab-active);
+}
+
+.chrome-window--selected .chrome-tab.chrome-tab--active::after {
+  right: -10px;
+  border-bottom-left-radius: 10px;
+  box-shadow: -4px 4px 0 4px var(--figma-tab-active);
 }
 
 .chrome-tab.chrome-tab--floating {
   cursor: grabbing !important;
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.08);
   opacity: 0.98;
+
+  background: #ffffff !important;
+  border-radius: 9px !important;
+  box-shadow:
+    0 18px 44px rgba(28, 38, 58, 0.24),
+    0 0 0 1px rgba(37, 43, 54, 0.12) !important;
 }
 
+.chrome-tab.chrome-tab--floating::before,
+.chrome-tab.chrome-tab--floating::after {
+  display: none !important;
+}
+
+/* =========================
+   Tab Contents
+========================= */
+
 .chrome-tab__favicon {
+  position: relative;
+
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+
   border-radius: 50%;
-  background: linear-gradient(145deg, #e8eaed 0%, #dadce0 100%);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
 .chrome-tab__favicon--chrome {
   background: conic-gradient(
-    #ea4335 0deg 90deg,
-    #fbbc04 90deg 180deg,
-    #34a853 180deg 270deg,
-    #4285f4 270deg 360deg
+    from -35deg,
+    #ea4335 0deg 93deg,
+    #fbbc04 93deg 180deg,
+    #34a853 180deg 268deg,
+    #4285f4 268deg 360deg
   );
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.chrome-tab__favicon--chrome::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+
+  border-radius: 50%;
+  background: #ffffff;
 }
 
 .chrome-tab__title {
   flex: 1;
   min-width: 0;
+
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  transform: translateY(0.2px);
 }
 
 .chrome-tab__close {
   display: flex;
   align-items: center;
   justify-content: center;
+
   width: 16px;
   height: 16px;
+  flex-shrink: 0;
+
   padding: 0;
   border: none;
-  border-radius: 3px;
+  border-radius: 50%;
   background: transparent;
-  color: var(--chrome-text-muted);
+
+  color: var(--figma-muted);
   opacity: 0;
   cursor: default;
-  flex-shrink: 0;
-  /* 투명해도 히트 영역을 잡아 탭 클릭이 막히지 않게 */
   pointer-events: none;
 }
 
-.chrome-tab:hover .chrome-tab__close {
+.chrome-tab:hover .chrome-tab__close,
+.chrome-tab.chrome-tab--active .chrome-tab__close {
   opacity: 1;
   pointer-events: auto;
 }
 
 .chrome-tab__close:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: transparent;
 }
 
 .chrome-newtab {
   display: flex;
   align-items: center;
   justify-content: center;
+
   width: 28px;
   height: 28px;
-  margin: 0 0 4px 2px;
+  flex-shrink: 0;
+
+  margin: 0 0 3px 4px;
   padding: 0;
+
   border: none;
-  border-radius: 6px;
+  border-radius: 50%;
   background: transparent;
-  color: var(--chrome-text-muted);
+
+  color: var(--figma-muted);
   cursor: default;
-  flex-shrink: 0;
 }
 
-.chrome-newtab:hover {
-  background: rgba(0, 0, 0, 0.06);
-}
+/* =========================
+   Toolbar
+========================= */
 
-/* Toolbar */
 .chrome-toolbar {
+  position: relative;
+  z-index: 2;
+
   flex-shrink: 0;
-  background: transparent;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  z-index: 4;
+  min-height: var(--figma-toolbar-h);
+
+  background: var(--figma-toolbar);
+  border-bottom: 1px solid rgba(37, 43, 54, 0.08);
 }
 
-.chrome-window:not(.chrome-window--selected) .chrome-toolbar {
-  border-bottom-color: rgba(0, 0, 0, 0.04);
-}
+.chrome-toolbar::before {
+  content: "";
 
-.chrome-window:not(.chrome-window--selected) .chrome-toolbar__row {
-  opacity: 0.9;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  z-index: 3;
+
+  height: 8px;
+
+  background: var(--figma-toolbar);
+  pointer-events: none;
 }
 
 .chrome-toolbar__row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: var(--toolbar-row-height);
-  padding: 5px 12px 6px;
-}
-
-.chrome-toolbar__nav {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.chrome-iconbtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  cursor: default;
-}
-
-.chrome-iconbtn:hover {
-  background: rgba(0, 0, 0, 0.06);
-}
-
-.chrome-omnibox {
   position: relative;
-  flex: 1;
+  z-index: 2;
+
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 0;
-  min-height: 32px;
-  padding: 5px 14px 5px 12px;
-  background: var(--m3-omnibox-fill);
-  border-radius: 999px;
-  border: none;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  flex-wrap: nowrap;
+
+  height: var(--figma-toolbar-h);
+  min-height: var(--figma-toolbar-h);
+
+  background: var(--figma-toolbar);
 }
 
-.chrome-window:not(.chrome-window--selected) .chrome-omnibox {
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.07);
+.chrome-toolbar__nav,
+.chrome-toolbar__tail {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.chrome-toolbar__nav {
+  padding-left: 5px;
+}
+
+.chrome-toolbar__tail {
+  margin-left: 0;
+  gap: 3px;
+}
+
+/* =========================
+   Toolbar Buttons
+========================= */
+
+.chrome-iconbtn,
+.chrome-omnibox__star {
+  position: relative;
+
+  display: grid;
+  place-items: center;
+
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+
+  color: var(--figma-muted);
+  cursor: default;
+}
+
+.chrome-iconbtn svg,
+.chrome-omnibox__star svg,
+.chrome-newtab svg,
+.chrome-tab__close svg {
+  display: block;
+  pointer-events: none;
+}
+
+/*
+.chrome-iconbtn:hover,
+.chrome-omnibox__star:hover {
+  background: rgba(67, 76, 92, 0.1);
+}
+*/
+
+/* =========================
+   Omnibox
+========================= */
+
+.chrome-omnibox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  flex: 1;
+  min-width: 90px;
+  height: 28px;
+
+  padding: 0 10px;
+
+  border: none;
+  border-radius: 999px;
+  background: var(--figma-omnibox);
+  box-shadow: none;
+
+  color: var(--figma-text);
+  overflow: hidden;
 }
 
 .chrome-omnibox__icon {
-  display: flex;
+  position: relative;
+
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
 }
 
 .chrome-omnibox__google-g {
   display: block;
+  width: 16px;
+  height: 16px;
 }
 
-.chrome-window:not(.chrome-window--selected) .chrome-omnibox__google-g {
-  opacity: 0.78;
+.chrome-omnibox__icon--lock::before {
+  content: "";
+
+  position: absolute;
+  left: 4px;
+  top: 7px;
+
+  width: 8px;
+  height: 6px;
+
+  border-radius: 1px;
+  background: #5f6368;
+}
+
+.chrome-omnibox__icon--lock::after {
+  content: "";
+
+  position: absolute;
+  left: 5px;
+  top: 3px;
+
+  width: 6px;
+  height: 7px;
+
+  border: 1.6px solid #5f6368;
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
 }
 
 .chrome-omnibox__url {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
-  line-height: 1.25;
+
   color: #3c4043;
+  font-size: 12px;
+  line-height: 1;
+
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
   user-select: none;
 }
 
-.chrome-window:not(.chrome-window--selected) .chrome-omnibox__url {
+.chrome-omnibox__url:empty::before {
+  content: "Search Google or type a URL";
   color: #80868b;
 }
 
-.chrome-toolbar__tail {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
 .chrome-profile {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+
+  margin: 0 3px;
+
   border-radius: 50%;
-  background: linear-gradient(180deg, #4a9eff 0%, #1a73e8 55%, #1557b0 100%);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95);
+  background:
+    radial-gradient(circle at 50% 35%, #e8f0fe 0 26%, transparent 27%),
+    radial-gradient(circle at 50% 112%, #e8f0fe 0 40%, transparent 41%),
+    #1a73e8;
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 3px rgba(37, 43, 54, 0.08);
 }
 
-/* —— 빈 페이지 (하단만 둥근 흰 영역) —— */
-.chrome-page.chrome-page--blank {
-  flex: 1;
-  min-height: 120px;
+/* =========================
+   Page Area
+========================= */
+
+.chrome-page {
+  flex: 1 1 auto;
+  min-height: 0;
+
+  padding: 0;
+  border-top: none;
+  background: var(--figma-page);
+
+  overflow: hidden;
+}
+
+.chrome-page--blank {
   background: #ffffff;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-/* —— 믹스 HUD (body 직계 · fixed로 항상 우하단) —— */
+/* =========================
+   HUD
+========================= */
+
 .dj-param-hud {
   position: fixed;
   right: 14px;
   bottom: 14px;
   z-index: 2147483646;
+
   min-width: 148px;
   min-height: 1em;
+
   padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
+
+  color: var(--hud-text);
+  background: var(--hud-bg);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-size: 11px;
   line-height: 1.45;
-  color: #e8eaed;
-  background: rgba(32, 33, 36, 0.94);
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+
   pointer-events: none;
   user-select: none;
 }
@@ -523,52 +797,10 @@ body.chrome-ui--tab-tearing {
 }
 
 .dj-param-hud__name {
-  color: #9aa0a6;
+  color: var(--hud-muted);
 }
 
 .dj-param-hud__val {
+  color: var(--hud-accent);
   font-variant-numeric: tabular-nums;
-  color: #fdd663;
 }
-
-/* ===== EASTER EGG START ===== */
-.siu-egg {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0);
-  pointer-events: none;
-  opacity: 0;
-  z-index: 2147483647;
-}
-.siu-egg__img {
-  width: min(80vmin, 720px);
-  height: auto;
-  max-height: 90vh;
-  border-radius: 24px;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
-  transform: scale(0.2) rotate(0deg);
-  will-change: transform;
-}
-.siu-egg.is-firing {
-  animation: siu-backdrop 2.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-.siu-egg.is-firing .siu-egg__img {
-  animation: siu-spin 2.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-@keyframes siu-backdrop {
-  0%   { background: rgba(0, 0, 0, 0);    opacity: 0; }
-  18%  { background: rgba(0, 0, 0, 0.55); opacity: 1; }
-  72%  { background: rgba(0, 0, 0, 0.55); opacity: 1; }
-  100% { background: rgba(0, 0, 0, 0);    opacity: 0; }
-}
-@keyframes siu-spin {
-  0%   { transform: scale(0.2)  rotate(0deg); }
-  20%  { transform: scale(1.05) rotate(540deg); }
-  35%  { transform: scale(1)    rotate(720deg); }
-  72%  { transform: scale(1)    rotate(1440deg); }
-  100% { transform: scale(0.2)  rotate(1800deg); }
-}
-/* ===== EASTER EGG END ===== */
