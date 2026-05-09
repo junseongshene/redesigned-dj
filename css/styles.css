@@ -758,54 +758,6 @@ body.chrome-ui--tab-tearing {
 }
 
 /* =========================
-   HUD
-========================= */
-
-.dj-param-hud {
-  position: fixed;
-  right: 14px;
-  bottom: 14px;
-  z-index: 2147483646;
-
-  min-width: 148px;
-  min-height: 1em;
-
-  padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-
-  color: var(--hud-text);
-  background: var(--hud-bg);
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
-
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 11px;
-  line-height: 1.45;
-
-  pointer-events: none;
-  user-select: none;
-}
-
-.dj-param-hud__row {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-}
-
-.dj-param-hud__row + .dj-param-hud__row {
-  margin-top: 4px;
-}
-
-.dj-param-hud__name {
-  color: var(--hud-muted);
-}
-
-.dj-param-hud__val {
-  color: var(--hud-accent);
-  font-variant-numeric: tabular-nums;
-}
-
-/* =========================
    DJ controller images
 ========================= */
 
@@ -822,12 +774,36 @@ body.chrome-ui--tab-tearing {
   height: 100%;
   display: grid;
   place-items: center;
+  padding: 0;
   pointer-events: none;
+}
+
+.dj-controller-grid {
+  display: grid;
+  place-items: center;
+  gap: 0;
+  margin: 0;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.dj-controller-grid[data-count="1"] {
+  grid-template-columns: 1fr;
+}
+
+.dj-controller-grid[data-count="2"] {
+  grid-template-columns: repeat(2, minmax(0, auto));
+}
+
+.dj-controller-grid[data-count="3"],
+.dj-controller-grid[data-count="4"] {
+  grid-template-columns: repeat(2, minmax(0, auto));
+  grid-template-rows: repeat(2, minmax(0, auto));
 }
 
 .dj-controller {
   position: relative;
-  width: min(86%, 562px);
+  width: var(--controller-w, 260px);
   aspect-ratio: var(--panel-w) / var(--panel-h);
   pointer-events: none;
   user-select: none;

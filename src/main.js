@@ -30,8 +30,8 @@ const DJ_CONTROLLER_META = {
     type: "dial",
     panel: "volume",
     control: "volume_dial",
-    panelW: 562,
-    panelH: 606,
+    panelW: 561,
+    panelH: 604,
     controlW: 331,
     controlH: 341,
   },
@@ -39,8 +39,8 @@ const DJ_CONTROLLER_META = {
     type: "stick",
     panel: "pitch",
     control: "pitch_stick",
-    panelW: 562,
-    panelH: 606,
+    panelW: 561,
+    panelH: 604,
     controlW: 128,
     controlH: 88,
     rangePx: 400,
@@ -49,8 +49,8 @@ const DJ_CONTROLLER_META = {
     type: "stick",
     panel: "tempo",
     control: "tempo_stick",
-    panelW: 562,
-    panelH: 598,
+    panelW: 561,
+    panelH: 604,
     controlW: 128,
     controlH: 89,
     rangePx: 400,
@@ -59,8 +59,8 @@ const DJ_CONTROLLER_META = {
     type: "dial",
     panel: "bass",
     control: "bass_dial",
-    panelW: 562,
-    panelH: 598,
+    panelW: 561,
+    panelH: 604,
     controlW: 331,
     controlH: 341,
   },
@@ -315,6 +315,8 @@ function mergeAllTabs(sourceStrip, targetStrip, clientX, clientY) {
     pickTabNearestX(targetStrip, x) || mergedTabs[mergedTabs.length - 1];
   if (active) setOnlyActiveTab(targetStrip, active);
   clearDropMarkers();
+
+  renderDjControllers();
 }
 
 function overlapRatioAgainstSmallerRect(a, b) {
@@ -412,6 +414,7 @@ function createWindowWithTab(tab, clientX, clientY, stage, sourceWin) {
 
   stage.appendChild(clone);
   selectWindow(clone);
+  renderDjControllers();
 
   if (sourceWin) {
     const srcStrip = sourceWin.querySelector(".chrome-tabstrip__tabs");
@@ -612,70 +615,134 @@ function ensureDjControllerMount(page) {
   return mount;
 }
 
+function getDjChannelKeysForWindow(win) {
+  const strip = win.querySelector(".chrome-tabstrip__tabs");
+  if (!strip) return [];
+
+  const keys = [];
+
+  for (const tab of getTabs(strip)) {
+    const key = getDjChannelKeyFromTab(tab);
+
+    if (key && DJ_CONTROLLER_META[key] && !keys.includes(key)) {
+      keys.push(key);
+    }
+  }
+
+  return keys;
+}
+
+function getDjControllerGridShape(count) {
+  if (count <= 1) return { cols: 1, rows: 1 };
+  if (count === 2) return { cols: 2, rows: 1 };
+  return { cols: 2, rows: 2 };
+}
+
+function fitDjControllerWidthInGrid(page, meta, count) {
+  const pageW = page.clientWidth;
+  const pageH = page.clientHeight;
+
+  if (!pageW || !pageH) return meta.panelW;
+
+  const padding = 24;
+  const gap = 20;
+  const { cols, rows } = getDjControllerGridShape(count);
+
+  const availableW = Math.max(120, pageW - padding * 2 - gap * (cols - 1));
+  const availableH = Math.max(120, pageH - padding * 2 - gap * (rows - 1));
+
+  const cellW = availableW / cols;
+  const cellH = availableH / rows;
+
+  const widthByCellW = cellW;
+  const widthByCellH = cellH * (meta.panelW / meta.panelH);
+
+  return Math.min(meta.panelW, widthByCellW, widthByCellH);
+}
+
 function renderDjControllers() {
   document.querySelectorAll(".chrome-window").forEach((win) => {
     const page = win.querySelector(".chrome-page--blank");
     if (!page) return;
 
-    const channelKey = getDjChannelKeyForWindow(win);
-    const meta = DJ_CONTROLLER_META[channelKey];
-
+    const channelKeys = getDjChannelKeysForWindow(win);
     const mount = ensureDjControllerMount(page);
 
-    if (!meta) {
+    if (channelKeys.length === 0) {
       mount.innerHTML = "";
-      mount.removeAttribute("data-channel");
+      mount.removeAttribute("data-channels");
       return;
     }
 
-    if (mount.dataset.channel !== channelKey) {
-      mount.dataset.channel = channelKey;
+    const channelSignature = channelKeys.join("|");
+
+    if (mount.dataset.channels !== channelSignature) {
+      mount.dataset.channels = channelSignature;
 
       mount.innerHTML = `
-        <div class="dj-controller dj-controller--${meta.type}" data-channel="${channelKey}">
-          <img
-            class="dj-controller__panel"
-            src="${getDjControllerAssetUrl(meta.panel)}"
-            alt=""
-            draggable="false"
-            aria-hidden="true"
-          />
-          <img
-            class="dj-controller__control"
-            src="${getDjControllerAssetUrl(meta.control)}"
-            alt=""
-            draggable="false"
-            aria-hidden="true"
-          />
+        <div class="dj-controller-grid" data-count="${channelKeys.length}">
+          ${channelKeys
+            .map((channelKey) => {
+              const meta = DJ_CONTROLLER_META[channelKey];
+
+              return `
+                <div class="dj-controller dj-controller--${meta.type}" data-channel="${channelKey}">
+                  <img
+                    class="dj-controller__panel"
+                    src="${getDjControllerAssetUrl(meta.panel)}"
+                    alt=""
+                    draggable="false"
+                    aria-hidden="true"
+                  />
+                  <img
+                    class="dj-controller__control"
+                    src="${getDjControllerAssetUrl(meta.control)}"
+                    alt=""
+                    draggable="false"
+                    aria-hidden="true"
+                  />
+                </div>
+              `;
+            })
+            .join("")}
         </div>
       `;
     }
 
-    const controller = mount.querySelector(".dj-controller");
-    if (!controller) return;
+    const grid = mount.querySelector(".dj-controller-grid");
+    if (!grid) return;
 
-    controller.style.setProperty("--panel-w", String(meta.panelW));
-    controller.style.setProperty("--panel-h", String(meta.panelH));
-    controller.style.setProperty("--control-w", `${(meta.controlW / meta.panelW) * 100}%`);
-    controller.style.width = `${Math.round(fitDjControllerWidth(page, meta))}px`;
+    grid.dataset.count = String(channelKeys.length);
 
-    const pct = clamp(Number(djState[channelKey] ?? 50), 0, 100);
+    channelKeys.forEach((channelKey) => {
+      const meta = DJ_CONTROLLER_META[channelKey];
+      const controller = grid.querySelector(`.dj-controller[data-channel="${channelKey}"]`);
+      if (!controller || !meta) return;
 
-    if (meta.type === "dial") {
-      const deg = -135 + (pct / 100) * 270;
-      controller.style.setProperty("--dial-rot", `${deg}deg`);
-      controller.style.removeProperty("--stick-y");
-    }
+      const controllerW = fitDjControllerWidthInGrid(page, meta, channelKeys.length);
 
-    if (meta.type === "stick") {
-      // 0% = 아래로 200px, 50% = 중앙, 100% = 위로 200px
-      // 원사이즈 기준 400px 이동범위를 panel 높이에 대한 %로 환산
-      const yPx = (50 - pct) * (meta.rangePx / 100);
-      const yPercent = (yPx / meta.panelH) * 100;
+      controller.style.setProperty("--panel-w", String(meta.panelW));
+      controller.style.setProperty("--panel-h", String(meta.panelH));
+      controller.style.setProperty("--controller-w", `${Math.round(controllerW)}px`);
+      controller.style.setProperty("--control-w", `${(meta.controlW / meta.panelW) * 100}%`);
 
-      controller.style.setProperty("--stick-y", `${yPercent}%`);
-      controller.style.removeProperty("--dial-rot");
-    }
+      const pct = clamp(Number(djState[channelKey] ?? 50), 0, 100);
+
+      if (meta.type === "dial") {
+        const deg = -135 + (pct / 100) * 270;
+
+        controller.style.setProperty("--dial-rot", `${deg}deg`);
+        controller.style.removeProperty("--stick-y");
+      }
+
+      if (meta.type === "stick") {
+        const yPx = (50 - pct) * (meta.rangePx / 100);
+        const yPercent = (yPx / meta.panelH) * 100;
+
+        controller.style.setProperty("--stick-y", `${yPercent}%`);
+        controller.style.removeProperty("--dial-rot");
+      }
+    });
   });
 }
 
