@@ -1582,7 +1582,7 @@ function attachStage(stage) {
     if (!handle || !handle.contains(e.target)) return;
 
     if (e.target.closest(".chrome-tab__close")) return;
-    if (e.target.closest(".chrome-newtab")) return;
+    // if (e.target.closest(".chrome-newtab")) return;
 
     const tab = e.target.closest(".chrome-tab");
     const strip = win.querySelector(".chrome-tabstrip__tabs");
