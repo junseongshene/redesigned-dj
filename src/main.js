@@ -16,7 +16,7 @@ const POINTER_WIN_OPTS = { capture: true };
 const DJ_CHANNELS = ["Volume", "Pitch", "Tempo", "Bass"];
 
 /** 창 중심이 이 픽셀만큼 움직일 때 약 1% 변화 (클수록 둔감). 예전 대비 약 3배 둔하게. */
-const DJ_WIN_PX_PER_PERCENT = 20;
+const DJ_WIN_PX_PER_PERCENT = 50;
 
 /** 창이 화면 가장자리에서 완전히 붙지 않게 남길 여백(px) */
 const WINDOW_DRAG_VIEWPORT_PADDING = 0;
