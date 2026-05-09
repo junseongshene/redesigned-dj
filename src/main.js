@@ -66,6 +66,13 @@ const DJ_CONTROLLER_META = {
   },
 };
 
+const DJ_CHANNEL_COLORS = {
+  Volume: "#ffebc9",
+  Pitch: "#ccfaff",
+  Tempo: "#ffffc8",
+  Bass: "#f4e6ff",
+};
+
 function getDjControllerAssetUrl(name) {
   return `${DJ_CONTROLLER_ASSET_DIR}${name}.png`;
 }
@@ -213,14 +220,29 @@ function selectWindow(selected) {
 
 function syncWindowActiveChannelAttrs() {
   document.querySelectorAll(".chrome-window").forEach((win) => {
+    const channelKeys = getDjChannelKeysForWindow(win);
     const channelKey = getDjChannelKeyForWindow(win);
 
-    if (channelKey) {
+    if (channelKey && channelKeys.length > 0) {
       win.dataset.activeChannel = channelKey;
+      const gradient = buildWindowChannelGradient(channelKeys);
+      if (gradient) {
+        win.style.setProperty("--window-top-grad", gradient);
+      } else {
+        win.style.removeProperty("--window-top-grad");
+      }
     } else {
       delete win.dataset.activeChannel;
+      win.style.removeProperty("--window-top-grad");
     }
   });
+}
+
+function buildWindowChannelGradient(channelKeys) {
+  const colors = channelKeys.map((k) => DJ_CHANNEL_COLORS[k]).filter(Boolean);
+  if (colors.length === 0) return "";
+  if (colors.length === 1) return colors[0];
+  return `linear-gradient(90deg, ${colors.join(", ")})`;
 }
 
 function getTabs(strip) {
@@ -302,7 +324,7 @@ function setOnlyActiveTab(strip, activeTab) {
 function resetOmniboxToNewTab(win) {
   const urlEl = win.querySelector(".chrome-omnibox__url");
   const icon = win.querySelector(".chrome-omnibox__icon");
-  if (urlEl) urlEl.textContent = "";
+  if (urlEl) urlEl.textContent = "Drag to tune Parameter";
   if (icon) {
     icon.className = "chrome-omnibox__icon";
     icon.innerHTML = OMNIBOX_GOOGLE_G;
@@ -792,7 +814,7 @@ function beginWindowDrag(e, win, handle, stage, tune) {
 
   let dragging = false;
   const pointerId = e.pointerId;
-  const channelKey = getDjChannelKeyForWindow(win);
+  const channelKeys = getDjChannelKeysForWindow(win);
   let prevCx = null;
   let prevCy = null;
 
@@ -833,19 +855,19 @@ function beginWindowDrag(e, win, handle, stage, tune) {
     const { bestRatio } = pickBestOverlapTargetWin(win, stage);
     applyMergeCrossfadePreview(bestRatio);
 
-    if (channelKey) {
+    if (channelKeys.length > 0) {
       const r = win.getBoundingClientRect();
       const cx = (r.left + r.right) / 2;
       const cy = (r.top + r.bottom) / 2;
       if (prevCx !== null && prevCy !== null) {
         const segment = Math.hypot(cx - prevCx, cy - prevCy);
         if (segment > 0) {
-          const pxPerPercent =
-            channelKey === "Pitch" ? 40 : DJ_WIN_PX_PER_PERCENT;
-
-          const deltaPct =
-            (tune.mode === "up" ? 1 : -1) * (segment / pxPerPercent);
-          djState[channelKey] = clamp(djState[channelKey] + deltaPct, 0, 100);
+          for (const key of channelKeys) {
+            const pxPerPercent = key === "Pitch" ? 40 : DJ_WIN_PX_PER_PERCENT;
+            const deltaPct =
+              (tune.mode === "up" ? 1 : -1) * (segment / pxPerPercent);
+            djState[key] = clamp(djState[key] + deltaPct, 0, 100);
+          }
 
           syncExhibitionAudioFromDjState({ deferToFrame: true });
           scheduleDjHudDom();
@@ -858,7 +880,7 @@ function beginWindowDrag(e, win, handle, stage, tune) {
 
   const onUp = (ev) => {
     if (ev.pointerId !== pointerId) return;
-    if (channelKey === "Pitch") {
+    if (channelKeys.includes("Pitch")) {
       if (djHudDomRaf) {
         cancelAnimationFrame(djHudDomRaf);
         djHudDomRaf = 0;
@@ -1563,12 +1585,16 @@ function attachStage(stage) {
     if (e.target.closest(".chrome-newtab")) return;
 
     const tab = e.target.closest(".chrome-tab");
-
-    /** 좌클릭 + 탭: 가로=믹스 / 세로=뜯기 */
-    if (tab && e.button === 0) {
-      selectWindow(win);
-      beginTabTear(e, win, tab, stage);
-      return;
+    const strip = win.querySelector(".chrome-tabstrip__tabs");
+    if (tab && strip && e.button === 0) {
+      // 탭을 잡아 창을 움직여도, 클릭한 탭이 활성화되어야 이후 동작(재분리 대상 선택)이 가능함
+      setOnlyActiveTab(strip, tab);
+      // 탭이 2개 이상 합쳐진 상태에서는 탭 드래그를 우선 분리 동작으로 처리
+      if (getTabs(strip).length > 1) {
+        selectWindow(win);
+        beginTabTear(e, win, tab, stage);
+        return;
+      }
     }
 
     /** 우클릭: 창 드래그 = 수치 하락만 */
