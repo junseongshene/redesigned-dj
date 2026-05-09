@@ -194,6 +194,20 @@ function selectWindow(selected) {
   document.querySelectorAll(".chrome-window").forEach((w) => {
     w.classList.toggle("chrome-window--selected", w === selected);
   });
+
+  syncWindowActiveChannelAttrs();
+}
+
+function syncWindowActiveChannelAttrs() {
+  document.querySelectorAll(".chrome-window").forEach((win) => {
+    const channelKey = getDjChannelKeyForWindow(win);
+
+    if (channelKey) {
+      win.dataset.activeChannel = channelKey;
+    } else {
+      delete win.dataset.activeChannel;
+    }
+  });
 }
 
 function getTabs(strip) {
@@ -268,6 +282,7 @@ function setOnlyActiveTab(strip, activeTab) {
     t.classList.toggle("chrome-tab--inactive", !isActive);
   });
 
+  syncWindowActiveChannelAttrs();
   renderDjControllers();
 }
 
@@ -1639,6 +1654,9 @@ async function init() {
   const stage = document.querySelector(".browser-stage");
   if (stage) attachStage(stage);
   installInactivityReload(stage);
+
+  syncWindowActiveChannelAttrs();
+
   renderDjHud();
   await initExhibitionAudio();
 }

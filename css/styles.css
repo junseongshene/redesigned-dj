@@ -843,3 +843,33 @@ body.chrome-ui--tab-tearing {
   top: calc(50% + var(--stick-y, 0%));
   transform: translate(-50%, -50%);
 }
+
+/* =========================
+   Selected window channel color
+   선택된 창일 때만 채널별 색 적용
+========================= */
+
+/* 비선택 창은 무조건 기존 회색 유지 */
+.chrome-window:not(.chrome-window--selected) .chrome-frame {
+  background: var(--figma-top-inactive) !important;
+}
+
+/* 선택된 창 + active tab이 Volume */
+.chrome-window--selected[data-active-channel="Volume"] .chrome-frame {
+  background: #ffebc9 !important;
+}
+
+/* 선택된 창 + active tab이 Pitch */
+.chrome-window--selected[data-active-channel="Pitch"] .chrome-frame {
+  background: #ccfaff !important;
+}
+
+/* 선택된 창 + active tab이 Tempo */
+.chrome-window--selected[data-active-channel="Tempo"] .chrome-frame {
+  background: #ffffc8 !important;
+}
+
+/* 선택된 창 + active tab이 Bass */
+.chrome-window--selected[data-active-channel="Bass"] .chrome-frame {
+  background: #f4e6ff !important;
+}
