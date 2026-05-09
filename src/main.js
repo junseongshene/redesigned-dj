@@ -190,12 +190,25 @@ function getClampedTranslateForViewport(win, dx, dy) {
   };
 }
 
+let chromeWindowZSeed = 40;
+
+function bringWindowToFront(win) {
+  if (!win) return;
+
+  chromeWindowZSeed += 1;
+  win.style.zIndex = String(chromeWindowZSeed);
+}
+
 function selectWindow(selected) {
   document.querySelectorAll(".chrome-window").forEach((w) => {
     w.classList.toggle("chrome-window--selected", w === selected);
   });
 
-  syncWindowActiveChannelAttrs();
+  bringWindowToFront(selected);
+
+  if (typeof syncWindowActiveChannelAttrs === "function") {
+    syncWindowActiveChannelAttrs();
+  }
 }
 
 function syncWindowActiveChannelAttrs() {
@@ -1537,6 +1550,11 @@ function attachStage(stage) {
 
     const win = e.target.closest(".chrome-window");
     if (!win || !stage.contains(win)) return;
+
+    /* chrome-frame / chrome-page / 컨트롤러 영역을 눌러도 창 선택 + 최상단 */
+    if (e.button === 0 || e.button === 2) {
+      selectWindow(win);
+    }
 
     const handle = win.querySelector(".chrome-tabstrip--drag-handle");
     if (!handle || !handle.contains(e.target)) return;
