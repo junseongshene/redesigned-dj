@@ -804,3 +804,66 @@ body.chrome-ui--tab-tearing {
   color: var(--hud-accent);
   font-variant-numeric: tabular-nums;
 }
+
+/* =========================
+   DJ controller images
+========================= */
+
+.chrome-page.chrome-page--blank {
+  position: relative !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+}
+
+.dj-controller-mount {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.dj-controller {
+  position: relative;
+  width: min(86%, 562px);
+  aspect-ratio: var(--panel-w) / var(--panel-h);
+  pointer-events: none;
+  user-select: none;
+}
+
+.dj-controller__panel {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.dj-controller__control {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--control-w);
+  height: auto;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  transform-origin: 50% 50%;
+  will-change: transform, top;
+}
+
+.dj-controller--dial .dj-controller__control {
+  transform: translate(-50%, -50%) rotate(var(--dial-rot, 0deg));
+}
+
+.dj-controller--stick .dj-controller__control {
+  top: calc(50% + var(--stick-y, 0%));
+  transform: translate(-50%, -50%);
+}

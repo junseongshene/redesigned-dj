@@ -23,6 +23,53 @@ const WINDOW_DRAG_VIEWPORT_PADDING = 0;
 
 const djState = Object.fromEntries(DJ_CHANNELS.map((name) => [name, 50]));
 
+const DJ_CONTROLLER_ASSET_DIR = "./controllers/";
+
+const DJ_CONTROLLER_META = {
+  Volume: {
+    type: "dial",
+    panel: "volume",
+    control: "volume_dial",
+    panelW: 562,
+    panelH: 606,
+    controlW: 331,
+    controlH: 341,
+  },
+  Pitch: {
+    type: "stick",
+    panel: "pitch",
+    control: "pitch_stick",
+    panelW: 562,
+    panelH: 606,
+    controlW: 128,
+    controlH: 88,
+    rangePx: 400,
+  },
+  Tempo: {
+    type: "stick",
+    panel: "tempo",
+    control: "tempo_stick",
+    panelW: 562,
+    panelH: 598,
+    controlW: 128,
+    controlH: 89,
+    rangePx: 400,
+  },
+  Bass: {
+    type: "dial",
+    panel: "bass",
+    control: "bass_dial",
+    panelW: 562,
+    panelH: 598,
+    controlW: 331,
+    controlH: 341,
+  },
+};
+
+function getDjControllerAssetUrl(name) {
+  return `${DJ_CONTROLLER_ASSET_DIR}${name}.png`;
+}
+
 /** 배경 트랙 Web Audio (Rubber Band: 피치만 / 템포: media playbackRate + preservesPitch / lowshelf·gain) */
 let exhibitionMediaEl = null;
 let exhibitionTransitionEl = null;
@@ -220,6 +267,8 @@ function setOnlyActiveTab(strip, activeTab) {
     t.classList.toggle("chrome-tab--active", isActive);
     t.classList.toggle("chrome-tab--inactive", !isActive);
   });
+
+  renderDjControllers();
 }
 
 function resetOmniboxToNewTab(win) {
@@ -537,6 +586,99 @@ function getDjChannelKeyForWindow(win) {
   return DJ_CHANNELS.includes(label) ? label : null;
 }
 
+function fitDjControllerWidth(page, meta) {
+  const pageW = page.clientWidth;
+  const pageH = page.clientHeight;
+
+  if (!pageW || !pageH) return meta.panelW;
+
+  const padding = 28;
+
+  const byWidth = Math.max(120, pageW - padding * 2);
+  const byHeight = Math.max(120, (pageH - padding * 2) * (meta.panelW / meta.panelH));
+
+  return Math.min(meta.panelW, byWidth, byHeight);
+}
+
+function ensureDjControllerMount(page) {
+  let mount = page.querySelector(".dj-controller-mount");
+
+  if (!mount) {
+    mount = document.createElement("div");
+    mount.className = "dj-controller-mount";
+    page.appendChild(mount);
+  }
+
+  return mount;
+}
+
+function renderDjControllers() {
+  document.querySelectorAll(".chrome-window").forEach((win) => {
+    const page = win.querySelector(".chrome-page--blank");
+    if (!page) return;
+
+    const channelKey = getDjChannelKeyForWindow(win);
+    const meta = DJ_CONTROLLER_META[channelKey];
+
+    const mount = ensureDjControllerMount(page);
+
+    if (!meta) {
+      mount.innerHTML = "";
+      mount.removeAttribute("data-channel");
+      return;
+    }
+
+    if (mount.dataset.channel !== channelKey) {
+      mount.dataset.channel = channelKey;
+
+      mount.innerHTML = `
+        <div class="dj-controller dj-controller--${meta.type}" data-channel="${channelKey}">
+          <img
+            class="dj-controller__panel"
+            src="${getDjControllerAssetUrl(meta.panel)}"
+            alt=""
+            draggable="false"
+            aria-hidden="true"
+          />
+          <img
+            class="dj-controller__control"
+            src="${getDjControllerAssetUrl(meta.control)}"
+            alt=""
+            draggable="false"
+            aria-hidden="true"
+          />
+        </div>
+      `;
+    }
+
+    const controller = mount.querySelector(".dj-controller");
+    if (!controller) return;
+
+    controller.style.setProperty("--panel-w", String(meta.panelW));
+    controller.style.setProperty("--panel-h", String(meta.panelH));
+    controller.style.setProperty("--control-w", `${(meta.controlW / meta.panelW) * 100}%`);
+    controller.style.width = `${Math.round(fitDjControllerWidth(page, meta))}px`;
+
+    const pct = clamp(Number(djState[channelKey] ?? 50), 0, 100);
+
+    if (meta.type === "dial") {
+      const deg = -135 + (pct / 100) * 270;
+      controller.style.setProperty("--dial-rot", `${deg}deg`);
+      controller.style.removeProperty("--stick-y");
+    }
+
+    if (meta.type === "stick") {
+      // 0% = 아래로 200px, 50% = 중앙, 100% = 위로 200px
+      // 원사이즈 기준 400px 이동범위를 panel 높이에 대한 %로 환산
+      const yPx = (50 - pct) * (meta.rangePx / 100);
+      const yPercent = (yPx / meta.panelH) * 100;
+
+      controller.style.setProperty("--stick-y", `${yPercent}%`);
+      controller.style.removeProperty("--dial-rot");
+    }
+  });
+}
+
 /**
  * @param {{ mode: "up" | "down" }} tune — 좌클릭: 상승만, 우클릭: 하락만. 변화량은 창 중심 이동 거리에 비례.
  */
@@ -684,14 +826,17 @@ function beginWindowDrag(e, win, handle, stage, tune) {
 
 function updateDjHudDom() {
   const el = document.getElementById("dj-param-hud");
-  if (!el) return;
-  el.innerHTML = DJ_CHANNELS.map(
-    (name) =>
-      `<div class="dj-param-hud__row"><span class="dj-param-hud__name">${name}</span><span class="dj-param-hud__val">${Math.round(
-        djState[name],
-      )}%</span></div>`,
-  ).join("");
-  maybeFireSiuEgg(); // ===== EASTER EGG =====
+
+  if (el) {
+    el.innerHTML = DJ_CHANNELS.map(
+      (name) =>
+        `<div class="dj-param-hud__row"><span class="dj-param-hud__name">${name}</span><span class="dj-param-hud__val">${Math.round(
+          djState[name]
+        )}%</span></div>`
+    ).join("");
+  }
+
+  renderDjControllers();
 }
 
 // ===== EASTER EGG START =====
@@ -1455,3 +1600,7 @@ if (document.readyState === "loading") {
 } else {
   void boot();
 }
+
+window.addEventListener("resize", () => {
+  renderDjControllers();
+});
