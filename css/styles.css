@@ -444,32 +444,28 @@ body.chrome-ui--tab-tearing {
 ========================= */
 
 .chrome-tab__favicon {
-  position: relative;
-
   width: 16px;
   height: 16px;
   flex-shrink: 0;
 
-  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 0;
+  background: transparent;
+
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 14px;
+  line-height: 1;
 }
 
 .chrome-tab__favicon--chrome {
-  background: conic-gradient(
-    from -35deg,
-    #ea4335 0deg 93deg,
-    #fbbc04 93deg 180deg,
-    #34a853 180deg 268deg,
-    #4285f4 268deg 360deg
-  );
+  background: transparent;
 }
 
 .chrome-tab__favicon--chrome::after {
-  content: "";
-  position: absolute;
-  inset: 4px;
-
-  border-radius: 50%;
-  background: #ffffff;
+  display: none;
 }
 
 .chrome-tab__title {
@@ -667,9 +663,18 @@ body.chrome-ui--tab-tearing {
 }
 
 .chrome-omnibox__google-g {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   width: 16px;
   height: 16px;
+
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 14px;
+  line-height: 1;
+
+  transform: translateY(0.5px);
 }
 
 .chrome-omnibox__icon--lock::before {
@@ -707,7 +712,7 @@ body.chrome-ui--tab-tearing {
 
   color: #3c4043;
   font-size: 12px;
-  line-height: 1;
+  /* line-height: 1; */
 
   white-space: nowrap;
   overflow: hidden;
